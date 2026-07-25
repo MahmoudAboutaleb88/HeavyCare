@@ -108,26 +108,16 @@
         return;
       }
 
-      // Store the token so future requests can use it.
-      // (We'll build a proper shared auth helper in the next steps —
-      // this is just enough to prove login works end to end.)
+      // Store the token and the user's basic info so other pages
+      // (like index.html) know who's logged in without another request.
       localStorage.setItem('auth_token', body.data.token);
+      localStorage.setItem('auth_user', JSON.stringify(body.data.user));
 
-      showStatus('تم تسجيل الدخول بنجاح ✅', 'ok');
+      showStatus('تم تسجيل الدخول بنجاح ✅ جاري التحويل...', 'ok');
 
-      // Immediately test /api/auth/me using the token we just received.
-      const meRes = await fetch('/api/auth/me', {
-        headers: { Authorization: 'Bearer ' + body.data.token },
-      });
-      const meBody = await meRes.json();
-
-      if (meBody.success) {
-        userBox.style.display = 'block';
-        userBox.innerHTML =
-          '<strong>الاسم:</strong> ' + meBody.data.full_name + '<br>' +
-          '<strong>اليوزر:</strong> ' + meBody.data.username + '<br>' +
-          '<strong>الصلاحية:</strong> ' + meBody.data.role;
-      }
+      setTimeout(function () {
+        window.location.href = 'index.html';
+      }, 600);
     } catch (err) {
       showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
     } finally {
