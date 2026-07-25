@@ -9,7 +9,12 @@
 //   browser -> Vercel serverless function -> TiDB Cloud -> back to browser
 
 const { query } = require('../_lib/db');
+const { requireAuth } = require('../_lib/auth');
 const { sendSuccess, sendError } = require('../_lib/http');
+
+// Roles allowed to create/edit departments. Everyone who is logged in
+// (any role) can still VIEW the list — this list only restricts writes.
+const CAN_MANAGE_DEPARTMENTS = ['admin', 'workshop_manager'];
 
 module.exports = async function handler(req, res) {
   // Handle CORS preflight requests
@@ -17,11 +22,21 @@ module.exports = async function handler(req, res) {
     return sendSuccess(res, 200, null);
   }
 
+  // Every request to this endpoint must be from a logged-in user —
+  // no anonymous access, whether viewing or writing.
+  const user = requireAuth(req);
+  if (!user) {
+    return sendError(res, 401, 'Unauthorized — please log in');
+  }
+
   if (req.method === 'GET') {
     return handleList(req, res);
   }
 
   if (req.method === 'POST') {
+    if (!CAN_MANAGE_DEPARTMENTS.includes(user.role)) {
+      return sendError(res, 403, 'You do not have permission to create departments');
+    }
     return handleCreate(req, res);
   }
 
