@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إقفال زيارة الورشة</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 40px 20px;
+    color: #1f2937;
+  }
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 28px;
+  }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f1f3;
+    font-size: 13px;
+    color: #6b7280;
+  }
+  .topbar a { color: #2563eb; text-decoration: none; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.subtitle { color: #6b7280; margin: 0 0 20px; font-size: 14px; }
+
+  .summary {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 16px;
+  }
+  .summary strong { color: #374151; }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+    margin-bottom: 8px;
+  }
+  .field { display: flex; flex-direction: column; }
+  .field.full { grid-column: 1 / -1; }
+  label { font-size: 13px; margin-bottom: 4px; color: #374151; }
+  label .req { color: #dc2626; }
+  input, select, textarea {
+    padding: 9px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+
+  button.primary {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 14px;
+  }
+  button.primary:hover { background: #15803d; }
+  button.primary:disabled { background: #93a3ba; cursor: not-allowed; }
+
+  .status { font-size: 13px; margin: 12px 0; min-height: 18px; white-space: pre-wrap; }
+  .status.error { color: #dc2626; }
+  .status.ok { color: #16a34a; }
+  .loading { text-align: center; color: #9ca3af; padding: 40px 0; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="topbar">
+    <a href="workshop-entries.html">← رجوع لدخول الورشة</a>
+  </div>
+
+  <div id="loadingBox" class="loading">جاري تحميل بيانات الزيارة...</div>
+
+  <div id="content" style="display:none;">
+    <h1>إقفال زيارة الورشة</h1>
+    <p class="subtitle">سجّل بيانات الخروج — المدة هتتحسب تلقائيًا</p>
+
+    <div class="summary" id="summaryBox"></div>
+
+    <form id="closeForm">
+      <div class="form-grid">
+        <div class="field">
+          <label>تاريخ الخروج <span class="req">*</span></label>
+          <input type="date" id="exitDate" required>
+        </div>
+        <div class="field">
+          <label>وقت الخروج <span class="req">*</span></label>
+          <input type="time" id="exitTime" required>
+        </div>
+
+        <div class="field full">
+          <label>حالة المعدة بعد الخروج <span class="req">*</span></label>
+          <select id="finalEquipmentStatus" required>
+            <option value="available">تعمل بشكل طبيعي (متاحة)</option>
+            <option value="breakdown">لسه معطلة</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <label>نتيجة الصيانة</label>
+          <textarea id="maintenanceResult" placeholder="مثال: تم استبدال الفلتر وإصلاح التسريب"></textarea>
+        </div>
+
+        <div class="field full">
+          <label>وصف حالة المعدة</label>
+          <input type="text" id="equipmentCondition" placeholder="مثال: جاهزة للعمل بدون ملاحظات">
+        </div>
+
+        <div class="field full">
+          <label>ملاحظات الفني النهائية</label>
+          <textarea id="finalTechnicianNotes"></textarea>
+        </div>
+      </div>
+
+      <button type="submit" class="primary" id="closeBtn">إقفال الزيارة</button>
+    </form>
+
+    <div id="status" class="status"></div>
+  </div>
+</div>
+
+<script>
+  // ---- Auth guard ----
+  const authToken = localStorage.getItem('auth_token');
+  const authUserRaw = localStorage.getItem('auth_user');
+
+  if (!authToken || !authUserRaw) {
+    window.location.href = 'login.html';
+    throw new Error('Not authenticated');
+  }
+
+  function authHeaders(extra) {
+    return Object.assign({ Authorization: 'Bearer ' + authToken }, extra || {});
+  }
+
+  function handleUnauthorized(res) {
+    if (res.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      window.location.href = 'login.html';
+      return true;
+    }
+    return false;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  // ---- Get entry id from the URL: workshop-entry-close.html?id=123 ----
+  const params = new URLSearchParams(window.location.search);
+  const entryId = params.get('id');
+
+  const loadingBox = document.getElementById('loadingBox');
+  const contentBox = document.getElementById('content');
+  const summaryBox = document.getElementById('summaryBox');
+  const statusEl = document.getElementById('status');
+  const closeForm = document.getElementById('closeForm');
+  const closeBtn = document.getElementById('closeBtn');
+
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'status ' + (type || '');
+  }
+
+  const maintenanceTypeLabels = { PM: 'صيانة دورية (PM)', BD: 'عطل (BD)' };
+
+  async function loadEntry() {
+    if (!entryId) {
+      loadingBox.textContent = 'رقم الزيارة غير موجود في الرابط';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/workshop-entries/' + entryId, { headers: authHeaders() });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+
+      if (!body.success) {
+        loadingBox.textContent = 'خطأ: ' + body.error;
+        return;
+      }
+
+      const entry = body.data;
+
+      if (entry.status === 'closed') {
+        loadingBox.textContent = 'هذه الزيارة مقفولة بالفعل (رقم: ' + entry.entry_number + ')';
+        return;
+      }
+
+      summaryBox.innerHTML =
+        '<div><strong>رقم الزيارة:</strong> ' + escapeHtml(entry.entry_number) + '</div>' +
+        '<div><strong>المعدة:</strong> ' + escapeHtml(entry.equipment_code) + '</div>' +
+        '<div><strong>الإدارة:</strong> ' + escapeHtml(entry.department_name) + '</div>' +
+        '<div><strong>النوع:</strong> ' + maintenanceTypeLabels[entry.maintenance_type] + '</div>' +
+        '<div><strong>تاريخ الدخول:</strong> ' + entry.entry_date + ' ' + entry.entry_time + '</div>' +
+        '<div><strong>المشكلة:</strong> ' + escapeHtml(entry.reported_problem) + '</div>';
+
+      // Sensible default: right now.
+      const now = new Date();
+      document.getElementById('exitDate').value = now.toISOString().slice(0, 10);
+      document.getElementById('exitTime').value = now.toTimeString().slice(0, 5);
+
+      loadingBox.style.display = 'none';
+      contentBox.style.display = 'block';
+
+      closeForm.addEventListener('submit', function (e) {
+        handleClose(e, entry);
+      });
+    } catch (err) {
+      loadingBox.textContent = 'تعذر الاتصال بالخادم: ' + err.message;
+    }
+  }
+
+  async function handleClose(e, entry) {
+    e.preventDefault();
+    closeBtn.disabled = true;
+    showStatus('جاري إقفال الزيارة...', '');
+
+    const payload = {
+      exit_date: document.getElementById('exitDate').value,
+      exit_time: document.getElementById('exitTime').value,
+      final_equipment_status: document.getElementById('finalEquipmentStatus').value,
+      maintenance_result: document.getElementById('maintenanceResult').value.trim(),
+      equipment_condition: document.getElementById('equipmentCondition').value.trim(),
+      final_technician_notes: document.getElementById('finalTechnicianNotes').value.trim(),
+    };
+
+    try {
+      const res = await fetch('/api/workshop-entries/' + entryId + '/close', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+
+      if (!body.success) {
+        showStatus('خطأ: ' + body.error, 'error');
+        return;
+      }
+
+      const durationText = entry.maintenance_type === 'PM'
+        ? (body.data.duration_hours + ' ساعة')
+        : (body.data.duration_days + ' يوم');
+
+      showStatus('تم إقفال الزيارة بنجاح ✅ — المدة الإجمالية: ' + durationText + '\nجاري التحويل لصفحة دخول الورشة...', 'ok');
+
+      setTimeout(function () {
+        window.location.href = 'workshop-entries.html';
+      }, 1800);
+    } catch (err) {
+      showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
+    } finally {
+      closeBtn.disabled = false;
+    }
+  }
+
+  loadEntry();
+</script>
+
+</body>
+</html>
