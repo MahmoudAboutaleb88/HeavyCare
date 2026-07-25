@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إعداد أول حساب مدير</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 40px 20px;
+    color: #1f2937;
+  }
+  .container {
+    max-width: 420px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 28px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.subtitle { color: #6b7280; margin: 0 0 24px; font-size: 14px; }
+  label { display: block; font-size: 13px; margin: 14px 0 4px; color: #374151; }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  button {
+    width: 100%;
+    margin-top: 20px;
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { background: #15803d; }
+  button:disabled { background: #93a3ba; cursor: not-allowed; }
+  .status { font-size: 13px; margin-top: 16px; min-height: 18px; white-space: pre-wrap; }
+  .status.error { color: #dc2626; }
+  .status.ok { color: #16a34a; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>إعداد أول حساب مدير</h1>
+  <p class="subtitle">استخدم الصفحة دي مرة واحدة بس. بعد إنشاء أول حساب، الصفحة دي مش هتشتغل تاني (محمية تلقائيًا).</p>
+
+  <form id="setupForm">
+    <label>المفتاح السري (Setup Key)</label>
+    <input type="password" id="setupKey" required>
+
+    <label>الاسم الكامل</label>
+    <input type="text" id="fullName" required>
+
+    <label>اسم المستخدم (Username)</label>
+    <input type="text" id="username" required>
+
+    <label>كلمة السر (8 أحرف على الأقل)</label>
+    <input type="password" id="password" minlength="8" required>
+
+    <button type="submit" id="submitBtn">إنشاء الحساب</button>
+  </form>
+
+  <div id="status" class="status"></div>
+</div>
+
+<script>
+  const formEl = document.getElementById('setupForm');
+  const statusEl = document.getElementById('status');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'status ' + (type || '');
+  }
+
+  formEl.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    showStatus('جاري الإنشاء...', '');
+
+    try {
+      const res = await fetch('/api/auth/setup-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setup_key: document.getElementById('setupKey').value,
+          full_name: document.getElementById('fullName').value,
+          username: document.getElementById('username').value,
+          password: document.getElementById('password').value,
+        }),
+      });
+      const body = await res.json();
+
+      if (!body.success) {
+        showStatus('خطأ: ' + body.error, 'error');
+        return;
+      }
+
+      showStatus('تم إنشاء الحساب بنجاح ✅\nتقدر دلوقتي تفتح صفحة login.html وتسجل دخول.', 'ok');
+      formEl.reset();
+    } catch (err) {
+      showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
