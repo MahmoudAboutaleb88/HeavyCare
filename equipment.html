@@ -75,6 +75,27 @@
   }
   button.primary:hover { background: #1d4ed8; }
   button.primary:disabled { background: #93a3ba; cursor: not-allowed; }
+  button.secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 14px;
+    margin-inline-start: 8px;
+  }
+  button.secondary:hover { background: #e5e7eb; }
+  .row-btn {
+    background: none;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+  .row-btn.edit { color: #2563eb; }
+  .row-btn.archive { color: #dc2626; }
 
   .status { font-size: 13px; margin: 12px 0; min-height: 18px; }
   .status.error { color: #dc2626; }
@@ -107,7 +128,7 @@
     </div>
   </div>
 
-  <h1>تسجيل المعدات</h1>
+  <h1 id="formTitle">تسجيل المعدات</h1>
   <p class="subtitle">بيانات المعدة الأساسية — الحقول المطلوبة فقط بجانبها علامة *</p>
 
   <form id="addForm">
@@ -161,6 +182,7 @@
     </div>
 
     <button type="submit" class="primary" id="addBtn">تسجيل المعدة</button>
+    <button type="button" class="secondary" id="cancelEditBtn" style="display:none;">إلغاء التعديل</button>
   </form>
 
   <div id="status" class="status"></div>
@@ -174,6 +196,7 @@
         <th>الماركة / الموديل</th>
         <th>الحالة</th>
         <th>العداد</th>
+        <th>الإجراءات</th>
       </tr>
     </thead>
     <tbody id="tableBody"></tbody>
@@ -219,6 +242,43 @@
   const departmentSelect = document.getElementById('departmentId');
   const formEl = document.getElementById('addForm');
   const addBtn = document.getElementById('addBtn');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const formTitle = document.getElementById('formTitle');
+
+  // When null, the form is in "add new" mode.
+  // When set to an equipment id, the form is in "edit" mode.
+  let editingId = null;
+
+  function enterEditMode(eq) {
+    editingId = eq.id;
+    formTitle.textContent = 'تعديل المعدة: ' + eq.code;
+    addBtn.textContent = 'حفظ التعديلات';
+    cancelEditBtn.style.display = 'inline-block';
+
+    document.getElementById('code').value = eq.code || '';
+    document.getElementById('equipmentType').value = eq.equipment_type || '';
+    document.getElementById('departmentId').value = eq.department_id || '';
+    document.getElementById('brand').value = eq.brand || '';
+    document.getElementById('model').value = eq.model || '';
+    document.getElementById('assetNumber').value = eq.asset_number || '';
+    document.getElementById('manufacturingYear').value = eq.manufacturing_year || '';
+    document.getElementById('hourMeter').value = eq.hour_meter || 0;
+    document.getElementById('purchaseDate').value = eq.purchase_date || '';
+    document.getElementById('warrantyExpiry').value = eq.warranty_expiry || '';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function exitEditMode() {
+    editingId = null;
+    formTitle.textContent = 'تسجيل المعدات';
+    addBtn.textContent = 'تسجيل المعدة';
+    cancelEditBtn.style.display = 'none';
+    formEl.reset();
+    document.getElementById('hourMeter').value = '0';
+  }
+
+  cancelEditBtn.addEventListener('click', exitEditMode);
 
   const statusLabels = {
     available: 'متاحة',
@@ -278,8 +338,13 @@
       }
 
       if (body.data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="empty">لا يوجد معدات مسجلة بعد</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد معدات مسجلة بعد</td></tr>';
       } else {
+        // Keep the full records around so "edit" can populate the form
+        // without a second network request.
+        window.__equipmentCache = {};
+        body.data.forEach(function (eq) { window.__equipmentCache[eq.id] = eq; });
+
         tableBody.innerHTML = body.data.map(function (eq) {
           const brandModel = [eq.brand, eq.model].filter(Boolean).join(' / ') || '-';
           return '<tr>' +
@@ -289,6 +354,10 @@
             '<td>' + escapeHtml(brandModel) + '</td>' +
             '<td><span class="badge ' + eq.current_status + '">' + statusLabels[eq.current_status] + '</span></td>' +
             '<td>' + eq.hour_meter + '</td>' +
+            '<td>' +
+              '<button type="button" class="row-btn edit" data-edit-id="' + eq.id + '">تعديل</button>' +
+              '<button type="button" class="row-btn archive" data-archive-id="' + eq.id + '" data-archive-code="' + escapeHtml(eq.code) + '">أرشفة</button>' +
+            '</td>' +
             '</tr>';
         }).join('');
       }
@@ -299,10 +368,48 @@
     }
   }
 
+  // ---- Handle "edit" and "archive" button clicks (event delegation) ----
+  tableBody.addEventListener('click', async function (e) {
+    const editId = e.target.getAttribute('data-edit-id');
+    const archiveId = e.target.getAttribute('data-archive-id');
+
+    if (editId) {
+      const eq = window.__equipmentCache[editId];
+      if (eq) enterEditMode(eq);
+      return;
+    }
+
+    if (archiveId) {
+      const code = e.target.getAttribute('data-archive-code');
+      const confirmed = window.confirm('هل أنت متأكد من أرشفة المعدة "' + code + '"؟ لن تظهر في القوائم بعد الأرشفة.');
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch('/api/equipment/' + archiveId, {
+          method: 'DELETE',
+          headers: authHeaders(),
+        });
+        if (handleUnauthorized(res)) return;
+        const body = await res.json();
+
+        if (!body.success) {
+          showStatus('خطأ: ' + body.error, 'error');
+          return;
+        }
+
+        if (editingId === Number(archiveId)) exitEditMode();
+        showStatus('تمت أرشفة المعدة بنجاح ✅', 'ok');
+        loadEquipment();
+      } catch (err) {
+        showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
+      }
+    }
+  });
+
   formEl.addEventListener('submit', async function (e) {
     e.preventDefault();
     addBtn.disabled = true;
-    showStatus('جاري التسجيل...', '');
+    showStatus(editingId ? 'جاري حفظ التعديلات...' : 'جاري التسجيل...', '');
 
     const payload = {
       code: document.getElementById('code').value.trim(),
@@ -317,9 +424,12 @@
       warranty_expiry: document.getElementById('warrantyExpiry').value,
     };
 
+    const url = editingId ? '/api/equipment/' + editingId : '/api/equipment';
+    const method = editingId ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch('/api/equipment', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method: method,
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload),
       });
@@ -331,9 +441,9 @@
         return;
       }
 
-      formEl.reset();
-      document.getElementById('hourMeter').value = '0';
-      showStatus('تم تسجيل المعدة بنجاح ✅', 'ok');
+      const wasEditing = !!editingId;
+      exitEditMode();
+      showStatus(wasEditing ? 'تم حفظ التعديلات بنجاح ✅' : 'تم تسجيل المعدة بنجاح ✅', 'ok');
       loadEquipment();
     } catch (err) {
       showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
