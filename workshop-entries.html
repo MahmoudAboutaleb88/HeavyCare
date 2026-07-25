@@ -353,7 +353,10 @@
             '<td><span class="badge ' + entry.priority + '">' + priorityLabels[entry.priority] + '</span></td>' +
             '<td>' + (progressLabels[entry.progress_status] || '-') + '</td>' +
             '<td>' + entry.entry_date + ' ' + entry.entry_time + '</td>' +
-            '<td><a href="workshop-entry-close.html?id=' + entry.id + '" style="color:#16a34a; text-decoration:underline; font-size:13px;">إقفال</a></td>' +
+            '<td>' +
+              (entry.status === 'open' ? '<a href="workshop-entry-close.html?id=' + entry.id + '" style="color:#16a34a; text-decoration:underline; font-size:13px; margin-inline-end:8px;">إقفال</a>' : '') +
+              '<a href="job-card.html?id=' + entry.job_card_id + '" style="color:#2563eb; text-decoration:underline; font-size:13px;">بطاقة الشغل</a>' +
+            '</td>' +
             '</tr>';
         }).join('');
       }
