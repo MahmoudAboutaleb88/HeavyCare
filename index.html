@@ -63,9 +63,30 @@
     border-bottom: 1px solid #f0f1f3;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 14px;
+    gap: 8px;
   }
   li:last-child { border-bottom: none; }
+  li .name { flex: 1; }
+  li .actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+  .row-btn {
+    background: none;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+  .row-btn.edit { color: #2563eb; }
+  .row-btn.archive { color: #dc2626; }
+  li input.edit-input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #93c5fd;
+    border-radius: 6px;
+    font-size: 14px;
+  }
   .status {
     font-size: 13px;
     margin-bottom: 12px;
@@ -188,7 +209,13 @@
       } else {
         body.data.forEach(function (dept) {
           const li = document.createElement('li');
-          li.innerHTML = '<span>' + escapeHtml(dept.name) + '</span><span>#' + dept.id + '</span>';
+          li.setAttribute('data-dept-id', dept.id);
+          li.innerHTML =
+            '<span class="name">' + escapeHtml(dept.name) + '</span>' +
+            '<span class="actions">' +
+              '<button type="button" class="row-btn edit" data-edit-id="' + dept.id + '">تعديل</button>' +
+              '<button type="button" class="row-btn archive" data-archive-id="' + dept.id + '" data-archive-name="' + escapeHtml(dept.name) + '">أرشفة</button>' +
+            '</span>';
           listEl.appendChild(li);
         });
       }
@@ -204,6 +231,94 @@
     div.textContent = str;
     return div.innerHTML;
   }
+
+  // ---- Handle edit / archive clicks (event delegation) ----
+  listEl.addEventListener('click', async function (e) {
+    const editId = e.target.getAttribute('data-edit-id');
+    const archiveId = e.target.getAttribute('data-archive-id');
+    const saveId = e.target.getAttribute('data-save-id');
+    const cancelId = e.target.getAttribute('data-cancel-id');
+
+    if (editId) {
+      const li = e.target.closest('li');
+      const currentName = li.querySelector('.name').textContent;
+      li.innerHTML =
+        '<input type="text" class="edit-input" value="' + escapeHtml(currentName) + '">' +
+        '<span class="actions">' +
+          '<button type="button" class="row-btn edit" data-save-id="' + editId + '">حفظ</button>' +
+          '<button type="button" class="row-btn archive" data-cancel-id="' + editId + '">إلغاء</button>' +
+        '</span>';
+      li.querySelector('.edit-input').focus();
+      return;
+    }
+
+    if (cancelId) {
+      loadDepartments(); // simplest way to discard the inline edit and re-render
+      return;
+    }
+
+    if (saveId) {
+      const li = e.target.closest('li');
+      const newName = li.querySelector('.edit-input').value.trim();
+      if (!newName) return;
+
+      try {
+        const res = await fetch('/api/departments/' + saveId, {
+          method: 'PUT',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ name: newName }),
+        });
+        if (res.status === 401) {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          window.location.href = 'login.html';
+          return;
+        }
+        const body = await res.json();
+
+        if (!body.success) {
+          showStatus('خطأ: ' + body.error, 'error');
+          return;
+        }
+
+        showStatus('تم حفظ التعديل بنجاح ✅', 'ok');
+        loadDepartments();
+      } catch (err) {
+        showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
+      }
+      return;
+    }
+
+    if (archiveId) {
+      const name = e.target.getAttribute('data-archive-name');
+      const confirmed = window.confirm('هل أنت متأكد من أرشفة قسم "' + name + '"؟');
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch('/api/departments/' + archiveId, {
+          method: 'DELETE',
+          headers: authHeaders(),
+        });
+        if (res.status === 401) {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          window.location.href = 'login.html';
+          return;
+        }
+        const body = await res.json();
+
+        if (!body.success) {
+          showStatus('خطأ: ' + body.error, 'error');
+          return;
+        }
+
+        showStatus('تمت أرشفة القسم بنجاح ✅', 'ok');
+        loadDepartments();
+      } catch (err) {
+        showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
+      }
+    }
+  });
 
   formEl.addEventListener('submit', async function (e) {
     e.preventDefault();
