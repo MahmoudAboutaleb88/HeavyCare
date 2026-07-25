@@ -53,4 +53,31 @@ async function query(sql, params = []) {
   return rows;
 }
 
-module.exports = { pool, query };
+/**
+ * Run multiple queries as a single all-or-nothing transaction.
+ * `work` receives a connection; use connection.execute(...) inside it.
+ * If anything inside `work` throws, everything is rolled back.
+ *
+ * Example:
+ *   const newId = await withTransaction(async (conn) => {
+ *     const [result] = await conn.execute('INSERT INTO ... VALUES (?)', [value]);
+ *     await conn.execute('UPDATE ... WHERE id = ?', [otherId]);
+ *     return result.insertId;
+ *   });
+ */
+async function withTransaction(work) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await work(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+module.exports = { pool, query, withTransaction };
