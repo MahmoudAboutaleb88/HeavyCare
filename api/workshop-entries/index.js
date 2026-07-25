@@ -196,7 +196,11 @@ async function handleCreate(req, res, user) {
     return sendSuccess(res, 201, created);
   } catch (err) {
     console.error('POST /api/workshop-entries failed:', err);
-    return sendError(res, 500, 'Failed to register workshop entry');
+    // TEMPORARY: surfacing the real error message to speed up debugging
+    // while we're setting things up. We'll remove this detail once the
+    // module is stable (a production system shouldn't expose raw DB
+    // error text to the browser).
+    return sendError(res, 500, 'Failed to register workshop entry: ' + (err && err.message ? err.message : 'unknown error'));
   }
 }
 
