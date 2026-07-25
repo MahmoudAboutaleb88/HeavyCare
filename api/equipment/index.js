@@ -64,13 +64,16 @@ async function handleCreate(req, res) {
   try {
     const body = req.body || {};
 
-    const name = String(body.name || '').trim();
     const code = String(body.code || '').trim();
+    // "name" is no longer collected from the form — the code is the
+    // real identifier. We still fill the database column (it's NOT NULL)
+    // with the code itself so nothing breaks if a name is added later.
+    const name = String(body.name || code).trim();
     const departmentId = Number(body.department_id);
 
     // --- Required fields ---
-    if (!name) return sendError(res, 400, 'Equipment name is required');
     if (!code) return sendError(res, 400, 'Equipment code is required');
+    if (!name) return sendError(res, 400, 'Equipment name is required');
     if (!departmentId) return sendError(res, 400, 'Department is required');
 
     // Confirm the department actually exists (avoids a confusing FK error
