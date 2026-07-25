@@ -125,7 +125,14 @@ async function handleCreate(req, res) {
     return sendSuccess(res, 201, created);
   } catch (err) {
     if (err && err.code === 'ER_DUP_ENTRY') {
-      return sendError(res, 409, 'A piece of equipment with this code already exists');
+      const message = String(err.sqlMessage || err.message || '');
+      if (message.includes('uq_equipment_asset_number')) {
+        return sendError(res, 409, 'رقم الأصل ده مستخدم لمعدة تانية بالفعل');
+      }
+      if (message.includes('uq_equipment_code')) {
+        return sendError(res, 409, 'كود المعدة ده مستخدم بالفعل');
+      }
+      return sendError(res, 409, 'هذه القيمة مكررة ومسجلة من قبل');
     }
     console.error('POST /api/equipment failed:', err);
     return sendError(res, 500, 'Failed to register equipment');
