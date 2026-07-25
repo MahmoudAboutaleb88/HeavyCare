@@ -199,6 +199,7 @@
         <th>الأولوية</th>
         <th>الحالة</th>
         <th>تاريخ الدخول</th>
+        <th>الإجراءات</th>
       </tr>
     </thead>
     <tbody id="tableBody"></tbody>
@@ -352,6 +353,7 @@
             '<td><span class="badge ' + entry.priority + '">' + priorityLabels[entry.priority] + '</span></td>' +
             '<td>' + (progressLabels[entry.progress_status] || '-') + '</td>' +
             '<td>' + entry.entry_date + ' ' + entry.entry_time + '</td>' +
+            '<td><a href="workshop-entry-close.html?id=' + entry.id + '" style="color:#16a34a; text-decoration:underline; font-size:13px;">إقفال</a></td>' +
             '</tr>';
         }).join('');
       }
