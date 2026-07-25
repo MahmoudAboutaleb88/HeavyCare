@@ -78,11 +78,34 @@
     font-size: 14px;
     padding: 12px 0;
   }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f1f3;
+    font-size: 13px;
+    color: #6b7280;
+  }
+  .link-btn {
+    background: none;
+    color: #dc2626;
+    padding: 0;
+    font-size: 13px;
+    text-decoration: underline;
+  }
+  .link-btn:hover { background: none; color: #b91c1c; }
 </style>
 </head>
 <body>
 
 <div class="container">
+  <div class="topbar">
+    <span id="userLabel"></span>
+    <button type="button" id="logoutBtn" class="link-btn">تسجيل خروج</button>
+  </div>
+
   <h1>إدارة الأقسام</h1>
   <p class="subtitle">صفحة اختبار — للتأكد إن الموقع بيتكلم مع قاعدة البيانات بنجاح</p>
 
@@ -97,6 +120,33 @@
 </div>
 
 <script>
+  // ---- Auth guard: run before anything else on the page ----
+  // If there's no token stored, this page has no business being open —
+  // send the visitor straight to the login page.
+  const authToken = localStorage.getItem('auth_token');
+  const authUserRaw = localStorage.getItem('auth_user');
+
+  if (!authToken || !authUserRaw) {
+    window.location.href = 'login.html';
+    throw new Error('Not authenticated'); // stop the rest of this script
+  }
+
+  const authUser = JSON.parse(authUserRaw);
+  document.getElementById('userLabel').textContent =
+    'مسجل دخول: ' + authUser.full_name + ' (' + authUser.role + ')';
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = 'login.html';
+  });
+
+  // Every API call from this page must carry the token, or the backend
+  // will correctly reject it with 401 Unauthorized.
+  function authHeaders(extra) {
+    return Object.assign({ Authorization: 'Bearer ' + authToken }, extra || {});
+  }
+
   const listEl = document.getElementById('list');
   const statusEl = document.getElementById('status');
   const formEl = document.getElementById('addForm');
@@ -111,7 +161,16 @@
   async function loadDepartments() {
     showStatus('جاري التحميل...', '');
     try {
-      const res = await fetch('/api/departments');
+      const res = await fetch('/api/departments', { headers: authHeaders() });
+
+      if (res.status === 401) {
+        // Token expired or invalid — send back to login.
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = 'login.html';
+        return;
+      }
+
       const body = await res.json();
 
       if (!body.success) {
@@ -154,10 +213,17 @@
     try {
       const res = await fetch('/api/departments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ name: name }),
       });
       const body = await res.json();
+
+      if (res.status === 401) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = 'login.html';
+        return;
+      }
 
       if (!body.success) {
         showStatus('خطأ: ' + body.error, 'error');
