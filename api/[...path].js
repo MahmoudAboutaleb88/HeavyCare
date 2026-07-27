@@ -23,6 +23,10 @@
 //   (e.g. { id: '5' }).
 // ============================================================================
 
+console.log({
+    url: req.url,
+    query: req.query
+});
 const { query, withTransaction } = require('./_lib/db');
 const { hashPassword, verifyPassword, signToken, requireAuth } = require('./_lib/auth');
 const { sendSuccess, sendError } = require('./_lib/http');
