@@ -973,8 +973,10 @@ export default async function handler(req, res) {
   // Vercel's dynamic-route query param name (which depends on the exact
   // filename and has proven fragile). This works regardless of how the
   // catch-all file ends up named.
-  const urlPath = (req.url || '').split('?')[0]; // e.g. "/api/departments/5"
-  const segments = urlPath.replace(/^\/api\/?/, '').split('/').filter(Boolean);
+  const segments = Array.isArray(req.query.path)
+    ? req.query.path
+    : (req.query.path ? [req.query.path] : []);
+  console.log("Segments:", segments);
 
   for (const route of routes) {
     const params = matchRoute(route.pattern, segments);
