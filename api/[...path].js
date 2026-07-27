@@ -981,5 +981,5 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  return sendError(res, 404, 'Not found: /' + segments.join('/'));
+  return sendError(res, 404, 'Not found: /' + segments.join('/') + ' | DEBUG url=' + req.url + ' query=' + JSON.stringify(req.query));
 };
