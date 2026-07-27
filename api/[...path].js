@@ -969,8 +969,12 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(null);
   }
 
-  const rawPath = req.query.path;
-  const segments = Array.isArray(rawPath) ? rawPath : (rawPath ? [rawPath] : []);
+  // Read the path directly from the request URL instead of relying on
+  // Vercel's dynamic-route query param name (which depends on the exact
+  // filename and has proven fragile). This works regardless of how the
+  // catch-all file ends up named.
+  const urlPath = (req.url || '').split('?')[0]; // e.g. "/api/departments/5"
+  const segments = urlPath.replace(/^\/api\/?/, '').split('/').filter(Boolean);
 
   for (const route of routes) {
     const params = matchRoute(route.pattern, segments);
@@ -981,5 +985,5 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  return sendError(res, 404, 'Not found: /' + segments.join('/') + ' | DEBUG url=' + req.url + ' query=' + JSON.stringify(req.query));
+  return sendError(res, 404, 'Not found: /' + segments.join('/'));
 };
