@@ -3,144 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>إقفال زيارة الورشة</title>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-    background: #f4f6f8;
-    margin: 0;
-    padding: 40px 20px;
-    color: #1f2937;
-  }
-  .container {
-    max-width: 640px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    padding: 28px;
-  }
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f1f3;
-    font-size: 13px;
-    color: #6b7280;
-  }
-  .topbar a { color: #2563eb; text-decoration: none; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p.subtitle { color: #6b7280; margin: 0 0 20px; font-size: 14px; }
+<title>HeavyCare — إقفال زيارة الورشة</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
   .summary {
-    background: #f9fafb;
-    border-radius: 8px;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
     padding: 14px 16px;
     margin-bottom: 20px;
     font-size: 13px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px 16px;
+    font-family: var(--font-mono);
   }
-  .summary strong { color: #374151; }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px 16px;
-    margin-bottom: 8px;
-  }
-  .field { display: flex; flex-direction: column; }
-  .field.full { grid-column: 1 / -1; }
-  label { font-size: 13px; margin-bottom: 4px; color: #374151; }
-  label .req { color: #dc2626; }
-  input, select, textarea {
-    padding: 9px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-  textarea { resize: vertical; min-height: 60px; }
-
-  button.primary {
-    background: #16a34a;
-    color: white;
-    border: none;
-    padding: 11px 22px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    margin-top: 14px;
-  }
-  button.primary:hover { background: #15803d; }
-  button.primary:disabled { background: #93a3ba; cursor: not-allowed; }
-
-  .status { font-size: 13px; margin: 12px 0; min-height: 18px; white-space: pre-wrap; }
-  .status.error { color: #dc2626; }
-  .status.ok { color: #16a34a; }
-  .loading { text-align: center; color: #9ca3af; padding: 40px 0; }
+  .summary strong { color: var(--color-ink); font-family: var(--font-body); }
+  .loading { text-align: center; color: var(--color-ink-muted); padding: 60px 0; }
+  .back-link { display: inline-flex; align-items: center; gap: 4px; color: var(--color-ink-muted); text-decoration: none; font-size: 13px; margin-bottom: 16px; }
+  .back-link svg { width: 14px; height: 14px; }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <div class="topbar">
-    <a href="workshop-entries.html">← رجوع لدخول الورشة</a>
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
   </div>
+  <nav class="nav-pills">
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill active"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+  </nav>
+</header>
+
+<main class="page page-narrow">
+  <a href="workshop-entries.html" class="back-link"><i data-lucide="arrow-right"></i> رجوع لدخول الورشة</a>
 
   <div id="loadingBox" class="loading">جاري تحميل بيانات الزيارة...</div>
 
   <div id="content" style="display:none;">
-    <h1>إقفال زيارة الورشة</h1>
-    <p class="subtitle">سجّل بيانات الخروج — المدة هتتحسب تلقائيًا</p>
+    <div class="nameplate">
+      <div class="eyebrow">WORKSHOP OPERATIONS · EXIT LOG</div>
+      <h1>إقفال زيارة الورشة</h1>
+      <p>سجّل بيانات الخروج — المدة هتتحسب تلقائيًا</p>
+    </div>
 
-    <div class="summary" id="summaryBox"></div>
+    <div class="card">
+      <div class="summary" id="summaryBox"></div>
 
-    <form id="closeForm">
-      <div class="form-grid">
-        <div class="field">
-          <label>تاريخ الخروج <span class="req">*</span></label>
-          <input type="date" id="exitDate" required>
+      <form id="closeForm">
+        <div class="form-grid">
+          <div>
+            <label>تاريخ الخروج <span class="req">*</span></label>
+            <input type="date" id="exitDate" required>
+          </div>
+          <div>
+            <label>وقت الخروج <span class="req">*</span></label>
+            <input type="time" id="exitTime" required>
+          </div>
+
+          <div class="field-full">
+            <label>حالة المعدة بعد الخروج <span class="req">*</span></label>
+            <select id="finalEquipmentStatus" required>
+              <option value="available">تعمل بشكل طبيعي (متاحة)</option>
+              <option value="breakdown">لسه معطلة</option>
+            </select>
+          </div>
+
+          <div class="field-full">
+            <label>نتيجة الصيانة</label>
+            <textarea id="maintenanceResult" placeholder="مثال: تم استبدال الفلتر وإصلاح التسريب"></textarea>
+          </div>
+
+          <div class="field-full">
+            <label>وصف حالة المعدة</label>
+            <input type="text" id="equipmentCondition" placeholder="مثال: جاهزة للعمل بدون ملاحظات">
+          </div>
+
+          <div class="field-full">
+            <label>ملاحظات الفني النهائية</label>
+            <textarea id="finalTechnicianNotes"></textarea>
+          </div>
         </div>
-        <div class="field">
-          <label>وقت الخروج <span class="req">*</span></label>
-          <input type="time" id="exitTime" required>
-        </div>
 
-        <div class="field full">
-          <label>حالة المعدة بعد الخروج <span class="req">*</span></label>
-          <select id="finalEquipmentStatus" required>
-            <option value="available">تعمل بشكل طبيعي (متاحة)</option>
-            <option value="breakdown">لسه معطلة</option>
-          </select>
-        </div>
+        <button type="submit" class="btn btn-success" id="closeBtn" style="margin-top:16px;"><i data-lucide="check-circle"></i> إقفال الزيارة</button>
+      </form>
 
-        <div class="field full">
-          <label>نتيجة الصيانة</label>
-          <textarea id="maintenanceResult" placeholder="مثال: تم استبدال الفلتر وإصلاح التسريب"></textarea>
-        </div>
-
-        <div class="field full">
-          <label>وصف حالة المعدة</label>
-          <input type="text" id="equipmentCondition" placeholder="مثال: جاهزة للعمل بدون ملاحظات">
-        </div>
-
-        <div class="field full">
-          <label>ملاحظات الفني النهائية</label>
-          <textarea id="finalTechnicianNotes"></textarea>
-        </div>
-      </div>
-
-      <button type="submit" class="primary" id="closeBtn">إقفال الزيارة</button>
-    </form>
-
-    <div id="status" class="status"></div>
+      <div id="status" class="status-msg"></div>
+    </div>
   </div>
-</div>
+</main>
 
 <script>
   // ---- Auth guard ----
@@ -172,7 +130,6 @@
     return div.innerHTML;
   }
 
-  // ---- Get entry id from the URL: workshop-entry-close.html?id=123 ----
   const params = new URLSearchParams(window.location.search);
   const entryId = params.get('id');
 
@@ -185,7 +142,7 @@
 
   function showStatus(message, type) {
     statusEl.textContent = message;
-    statusEl.className = 'status ' + (type || '');
+    statusEl.className = 'status-msg ' + (type === 'error' ? 'is-error' : type === 'ok' ? 'is-ok' : '');
   }
 
   const maintenanceTypeLabels = { PM: 'صيانة دورية (PM)', BD: 'عطل (BD)' };
@@ -221,13 +178,13 @@
         '<div><strong>تاريخ الدخول:</strong> ' + entry.entry_date + ' ' + entry.entry_time + '</div>' +
         '<div><strong>المشكلة:</strong> ' + escapeHtml(entry.reported_problem) + '</div>';
 
-      // Sensible default: right now.
       const now = new Date();
       document.getElementById('exitDate').value = now.toISOString().slice(0, 10);
       document.getElementById('exitTime').value = now.toTimeString().slice(0, 5);
 
       loadingBox.style.display = 'none';
       contentBox.style.display = 'block';
+      if (window.lucide) lucide.createIcons();
 
       closeForm.addEventListener('submit', function (e) {
         handleClose(e, entry);
@@ -282,6 +239,7 @@
   }
 
   loadEntry();
+  if (window.lucide) lucide.createIcons();
 </script>
 
 </body>
