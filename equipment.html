@@ -3,206 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نظام إدارة ورشة المعدات - المعدات</title>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-    background: #f4f6f8;
-    margin: 0;
-    padding: 40px 20px;
-    color: #1f2937;
-  }
-  .container {
-    max-width: 860px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    padding: 28px;
-  }
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f1f3;
-    font-size: 13px;
-    color: #6b7280;
-  }
-  .topbar nav a { color: #2563eb; text-decoration: none; margin-inline-start: 12px; }
-  .link-btn {
-    background: none;
-    border: none;
-    color: #dc2626;
-    padding: 0;
-    font-size: 13px;
-    text-decoration: underline;
-    cursor: pointer;
-  }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p.subtitle { color: #6b7280; margin: 0 0 20px; font-size: 14px; }
+<title>HeavyCare — المعدات</title>
 
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px 16px;
-    margin-bottom: 8px;
-  }
-  .field { display: flex; flex-direction: column; }
-  .field.full { grid-column: 1 / -1; }
-  label { font-size: 13px; margin-bottom: 4px; color: #374151; }
-  label .req { color: #dc2626; }
-  input, select, textarea {
-    padding: 9px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-  textarea { resize: vertical; min-height: 60px; }
-
-  button.primary {
-    background: #2563eb;
-    color: white;
-    border: none;
-    padding: 11px 22px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    margin-top: 14px;
-  }
-  button.primary:hover { background: #1d4ed8; }
-  button.primary:disabled { background: #93a3ba; cursor: not-allowed; }
-  button.secondary {
-    background: #f3f4f6;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    padding: 11px 22px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    margin-top: 14px;
-    margin-inline-start: 8px;
-  }
-  button.secondary:hover { background: #e5e7eb; }
-  .row-btn {
-    background: none;
-    border: none;
-    font-size: 13px;
-    cursor: pointer;
-    padding: 2px 6px;
-  }
-  .row-btn.edit { color: #2563eb; }
-  .row-btn.archive { color: #dc2626; }
-
-  .status { font-size: 13px; margin: 12px 0; min-height: 18px; }
-  .status.error { color: #dc2626; }
-  .status.ok { color: #16a34a; }
-
-  table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
-  th, td { text-align: right; padding: 10px 8px; border-bottom: 1px solid #f0f1f3; }
-  th { color: #6b7280; font-weight: 600; background: #f9fafb; }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-  }
-  .badge.available { background: #dcfce7; color: #166534; }
-  .badge.in_workshop { background: #fef3c7; color: #92400e; }
-  .badge.breakdown { background: #fee2e2; color: #991b1b; }
-  .badge.archived { background: #e5e7eb; color: #4b5563; }
-  .empty { color: #9ca3af; font-size: 14px; padding: 16px 0; text-align: center; }
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 
-<div class="container">
-  <div class="topbar">
-    <span id="userLabel"></span>
-    <div>
-      <nav><a href="index.html">الأقسام</a></nav>
-      <nav><a href="workshop-entries.html">دخول الورشة</a></nav>
-      <button type="button" id="logoutBtn" class="link-btn">تسجيل خروج</button>
-    </div>
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
+  </div>
+  <nav class="nav-pills">
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill active"><i data-lucide="truck"></i> المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+  </nav>
+  <div class="session">
+    <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
+    <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
+  </div>
+</header>
+
+<main class="page page-wide">
+
+  <div class="nameplate">
+    <div class="eyebrow">MASTER DATA · EQUIPMENT</div>
+    <h1 id="formTitle">تسجيل المعدات</h1>
+    <p>بيانات المعدة الأساسية — الحقول المطلوبة فقط بجانبها علامة *</p>
   </div>
 
-  <h1 id="formTitle">تسجيل المعدات</h1>
-  <p class="subtitle">بيانات المعدة الأساسية — الحقول المطلوبة فقط بجانبها علامة *</p>
+  <div class="card">
+    <form id="addForm">
+      <div class="form-grid">
+        <div class="field-full" style="display:grid; grid-template-columns:1fr 1fr; gap:14px 18px;">
+          <div>
+            <label>كود المعدة <span class="req">*</span></label>
+            <input type="text" id="code" required>
+          </div>
+          <div>
+            <label>نوع المعدة</label>
+            <input type="text" id="equipmentType" placeholder="مثال: شاحنة، رافعة، مولد">
+          </div>
+        </div>
 
-  <form id="addForm">
-    <div class="form-grid">
-      <div class="field">
-        <label>كود المعدة <span class="req">*</span></label>
-        <input type="text" id="code" required>
-      </div>
-      <div class="field">
-        <label>نوع المعدة</label>
-        <input type="text" id="equipmentType" placeholder="مثال: شاحنة، رافعة، مولد">
+        <div>
+          <label>الإدارة التابع لها <span class="req">*</span></label>
+          <select id="departmentId" required>
+            <option value="">جاري تحميل الإدارات...</option>
+          </select>
+        </div>
+        <div>
+          <label>الماركة</label>
+          <input type="text" id="brand">
+        </div>
+
+        <div>
+          <label>الموديل</label>
+          <input type="text" id="model">
+        </div>
+        <div>
+          <label>رقم الأصل (Asset Number)</label>
+          <input type="text" id="assetNumber">
+        </div>
+
+        <div>
+          <label>سنة الصنع</label>
+          <input type="number" id="manufacturingYear" min="1950" max="2100">
+        </div>
+        <div>
+          <label>قراءة العداد الحالية</label>
+          <input type="number" id="hourMeter" step="0.01" value="0">
+        </div>
+
+        <div>
+          <label>تاريخ الشراء</label>
+          <input type="date" id="purchaseDate">
+        </div>
+        <div>
+          <label>تاريخ انتهاء الضمان</label>
+          <input type="date" id="warrantyExpiry">
+        </div>
       </div>
 
-      <div class="field">
-        <label>الإدارة التابع لها <span class="req">*</span></label>
-        <select id="departmentId" required>
-          <option value="">جاري تحميل الإدارات...</option>
-        </select>
+      <div style="margin-top:16px;">
+        <button type="submit" class="btn btn-primary" id="addBtn"><i data-lucide="save"></i> تسجيل المعدة</button>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display:none;"><i data-lucide="x"></i> إلغاء التعديل</button>
       </div>
-      <div class="field">
-        <label>الماركة</label>
-        <input type="text" id="brand">
-      </div>
+    </form>
 
-      <div class="field">
-        <label>الموديل</label>
-        <input type="text" id="model">
-      </div>
-      <div class="field">
-        <label>رقم الأصل (Asset Number)</label>
-        <input type="text" id="assetNumber">
-      </div>
+    <div id="status" class="status-msg"></div>
+  </div>
 
-      <div class="field">
-        <label>سنة الصنع</label>
-        <input type="number" id="manufacturingYear" min="1950" max="2100">
-      </div>
-      <div class="field">
-        <label>قراءة العداد الحالية</label>
-        <input type="number" id="hourMeter" step="0.01" value="0">
-      </div>
+  <div class="card">
+    <h2>المعدات المسجّلة</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>الكود</th>
+          <th>النوع</th>
+          <th>الإدارة</th>
+          <th>الماركة / الموديل</th>
+          <th>الحالة</th>
+          <th>العداد</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
 
-      <div class="field">
-        <label>تاريخ الشراء</label>
-        <input type="date" id="purchaseDate">
-      </div>
-      <div class="field">
-        <label>تاريخ انتهاء الضمان</label>
-        <input type="date" id="warrantyExpiry">
-      </div>
-    </div>
-
-    <button type="submit" class="primary" id="addBtn">تسجيل المعدة</button>
-    <button type="button" class="secondary" id="cancelEditBtn" style="display:none;">إلغاء التعديل</button>
-  </form>
-
-  <div id="status" class="status"></div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>الكود</th>
-        <th>النوع</th>
-        <th>الإدارة</th>
-        <th>الماركة / الموديل</th>
-        <th>الحالة</th>
-        <th>العداد</th>
-        <th>الإجراءات</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
-</div>
+</main>
 
 <script>
   // ---- Auth guard ----
@@ -215,8 +130,8 @@
   }
 
   const authUser = JSON.parse(authUserRaw);
-  document.getElementById('userLabel').textContent =
-    'مسجل دخول: ' + authUser.full_name + ' (' + authUser.role + ')';
+  document.getElementById('userName').textContent = authUser.full_name;
+  document.getElementById('userRole').textContent = authUser.role;
 
   document.getElementById('logoutBtn').addEventListener('click', function () {
     localStorage.removeItem('auth_token');
@@ -246,15 +161,13 @@
   const cancelEditBtn = document.getElementById('cancelEditBtn');
   const formTitle = document.getElementById('formTitle');
 
-  // When null, the form is in "add new" mode.
-  // When set to an equipment id, the form is in "edit" mode.
   let editingId = null;
 
   function enterEditMode(eq) {
     editingId = eq.id;
     formTitle.textContent = 'تعديل المعدة: ' + eq.code;
-    addBtn.textContent = 'حفظ التعديلات';
-    cancelEditBtn.style.display = 'inline-block';
+    addBtn.innerHTML = '<i data-lucide="save"></i> حفظ التعديلات';
+    cancelEditBtn.style.display = 'inline-flex';
 
     document.getElementById('code').value = eq.code || '';
     document.getElementById('equipmentType').value = eq.equipment_type || '';
@@ -268,15 +181,17 @@
     document.getElementById('warrantyExpiry').value = eq.warranty_expiry || '';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (window.lucide) lucide.createIcons();
   }
 
   function exitEditMode() {
     editingId = null;
     formTitle.textContent = 'تسجيل المعدات';
-    addBtn.textContent = 'تسجيل المعدة';
+    addBtn.innerHTML = '<i data-lucide="save"></i> تسجيل المعدة';
     cancelEditBtn.style.display = 'none';
     formEl.reset();
     document.getElementById('hourMeter').value = '0';
+    if (window.lucide) lucide.createIcons();
   }
 
   cancelEditBtn.addEventListener('click', exitEditMode);
@@ -287,10 +202,16 @@
     breakdown: 'معطلة',
     archived: 'مؤرشفة',
   };
+  const statusBadgeClass = {
+    available: 'badge-success',
+    in_workshop: 'badge-warning',
+    breakdown: 'badge-danger',
+    archived: 'badge-neutral',
+  };
 
   function showStatus(message, type) {
     statusEl.textContent = message;
-    statusEl.className = 'status ' + (type || '');
+    statusEl.className = 'status-msg ' + (type === 'error' ? 'is-error' : type === 'ok' ? 'is-ok' : '');
   }
 
   function escapeHtml(str) {
@@ -299,7 +220,6 @@
     return div.innerHTML;
   }
 
-  // ---- Load departments into the dropdown ----
   async function loadDepartments() {
     try {
       const res = await fetch('/api/departments', { headers: authHeaders() });
@@ -325,7 +245,6 @@
     }
   }
 
-  // ---- Load and render equipment list ----
   async function loadEquipment() {
     showStatus('جاري التحميل...', '');
     try {
@@ -339,40 +258,40 @@
       }
 
       if (body.data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد معدات مسجلة بعد</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" class="empty-row">لا يوجد معدات مسجلة بعد</td></tr>';
       } else {
-        // Keep the full records around so "edit" can populate the form
-        // without a second network request.
         window.__equipmentCache = {};
         body.data.forEach(function (eq) { window.__equipmentCache[eq.id] = eq; });
 
         tableBody.innerHTML = body.data.map(function (eq) {
           const brandModel = [eq.brand, eq.model].filter(Boolean).join(' / ') || '-';
           return '<tr>' +
-            '<td>' + escapeHtml(eq.code) + '</td>' +
+            '<td class="cell-mono">' + escapeHtml(eq.code) + '</td>' +
             '<td>' + escapeHtml(eq.equipment_type || '-') + '</td>' +
             '<td>' + escapeHtml(eq.department_name) + '</td>' +
             '<td>' + escapeHtml(brandModel) + '</td>' +
-            '<td><span class="badge ' + eq.current_status + '">' + statusLabels[eq.current_status] + '</span></td>' +
-            '<td>' + eq.hour_meter + '</td>' +
+            '<td><span class="badge ' + statusBadgeClass[eq.current_status] + '">' + statusLabels[eq.current_status] + '</span></td>' +
+            '<td class="cell-mono">' + eq.hour_meter + '</td>' +
             '<td>' +
-              '<button type="button" class="row-btn edit" data-edit-id="' + eq.id + '">تعديل</button>' +
-              '<button type="button" class="row-btn archive" data-archive-id="' + eq.id + '" data-archive-code="' + escapeHtml(eq.code) + '">أرشفة</button>' +
+              '<button type="button" class="btn-link link-edit" data-edit-id="' + eq.id + '"><i data-lucide="pencil"></i> تعديل</button> ' +
+              '<button type="button" class="btn-link link-danger" data-archive-id="' + eq.id + '" data-archive-code="' + escapeHtml(eq.code) + '"><i data-lucide="archive"></i> أرشفة</button>' +
             '</td>' +
             '</tr>';
         }).join('');
       }
 
       showStatus('تم التحميل بنجاح (' + body.data.length + ' معدة)', 'ok');
+      if (window.lucide) lucide.createIcons();
     } catch (err) {
       showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
     }
   }
 
-  // ---- Handle "edit" and "archive" button clicks (event delegation) ----
   tableBody.addEventListener('click', async function (e) {
-    const editId = e.target.getAttribute('data-edit-id');
-    const archiveId = e.target.getAttribute('data-archive-id');
+    const target = e.target.closest('[data-edit-id], [data-archive-id]');
+    if (!target) return;
+    const editId = target.getAttribute('data-edit-id');
+    const archiveId = target.getAttribute('data-archive-id');
 
     if (editId) {
       const eq = window.__equipmentCache[editId];
@@ -381,7 +300,7 @@
     }
 
     if (archiveId) {
-      const code = e.target.getAttribute('data-archive-code');
+      const code = target.getAttribute('data-archive-code');
       const confirmed = window.confirm('هل أنت متأكد من أرشفة المعدة "' + code + '"؟ لن تظهر في القوائم بعد الأرشفة.');
       if (!confirmed) return;
 
@@ -455,6 +374,7 @@
 
   loadDepartments();
   loadEquipment();
+  if (window.lucide) lucide.createIcons();
 </script>
 
 </body>
