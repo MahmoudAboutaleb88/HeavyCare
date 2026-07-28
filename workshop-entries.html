@@ -3,208 +3,142 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نظام إدارة ورشة المعدات - دخول الورشة</title>
+<title>HeavyCare — دخول الورشة</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
 <style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-    background: #f4f6f8;
-    margin: 0;
-    padding: 40px 20px;
-    color: #1f2937;
-  }
-  .container {
-    max-width: 900px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    padding: 28px;
-  }
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f1f3;
-    font-size: 13px;
-    color: #6b7280;
-  }
-  .topbar nav a { color: #2563eb; text-decoration: none; margin-inline-end: 12px; }
-  .link-btn {
-    background: none;
-    border: none;
-    color: #dc2626;
-    padding: 0;
-    font-size: 13px;
-    text-decoration: underline;
-    cursor: pointer;
-  }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p.subtitle { color: #6b7280; margin: 0 0 20px; font-size: 14px; }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px 16px;
-    margin-bottom: 8px;
-  }
-  .field { display: flex; flex-direction: column; }
-  .field.full { grid-column: 1 / -1; }
-  label { font-size: 13px; margin-bottom: 4px; color: #374151; }
-  label .req { color: #dc2626; }
-  input, select, textarea {
-    padding: 9px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-  textarea { resize: vertical; min-height: 60px; }
-
   .maintenance-toggle { display: flex; gap: 10px; }
   .maintenance-toggle label {
     flex: 1;
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 9px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 14px;
+    font-weight: 500;
     margin: 0;
   }
   .maintenance-toggle input { width: auto; }
-
-  button.primary {
-    background: #2563eb;
-    color: white;
-    border: none;
-    padding: 11px 22px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    margin-top: 14px;
-  }
-  button.primary:hover { background: #1d4ed8; }
-  button.primary:disabled { background: #93a3ba; cursor: not-allowed; }
-
-  .status { font-size: 13px; margin: 12px 0; min-height: 18px; }
-  .status.error { color: #dc2626; }
-  .status.ok { color: #16a34a; }
-
-  table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
-  th, td { text-align: right; padding: 10px 8px; border-bottom: 1px solid #f0f1f3; }
-  th { color: #6b7280; font-weight: 600; background: #f9fafb; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
-  .badge.PM { background: #dbeafe; color: #1e40af; }
-  .badge.BD { background: #fee2e2; color: #991b1b; }
-  .badge.low { background: #f3f4f6; color: #4b5563; }
-  .badge.medium { background: #fef3c7; color: #92400e; }
-  .badge.high { background: #ffedd5; color: #c2410c; }
-  .badge.critical { background: #fee2e2; color: #991b1b; font-weight: 600; }
-  .empty { color: #9ca3af; font-size: 14px; padding: 16px 0; text-align: center; }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <div class="topbar">
-    <span id="userLabel"></span>
-    <div>
-      <nav>
-        <a href="index.html">الأقسام</a>
-        <a href="equipment.html">المعدات</a>
-      </nav>
-      <button type="button" id="logoutBtn" class="link-btn">تسجيل خروج</button>
-    </div>
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
+  </div>
+  <nav class="nav-pills">
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill active"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+  </nav>
+  <div class="session">
+    <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
+    <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
+  </div>
+</header>
+
+<main class="page page-wide">
+
+  <div class="nameplate">
+    <div class="eyebrow">WORKSHOP OPERATIONS · ENTRY LOG</div>
+    <h1>تسجيل دخول معدة للورشة</h1>
+    <p>اختر معدة مسجّلة بالفعل — المعدات الداخل الورشة حاليًا مش هتظهر في القائمة</p>
   </div>
 
-  <h1>تسجيل دخول معدة للورشة</h1>
-  <p class="subtitle">اختر معدة مسجّلة بالفعل — المعدات الداخل الورشة حاليًا مش هتظهر في القائمة</p>
+  <div class="card">
+    <form id="addForm">
+      <div class="form-grid">
+        <div class="field-full">
+          <label>المعدة <span class="req">*</span></label>
+          <select id="equipmentId" required>
+            <option value="">جاري تحميل المعدات...</option>
+          </select>
+        </div>
 
-  <form id="addForm">
-    <div class="form-grid">
-      <div class="field full">
-        <label>المعدة <span class="req">*</span></label>
-        <select id="equipmentId" required>
-          <option value="">جاري تحميل المعدات...</option>
-        </select>
-      </div>
+        <div class="field-full">
+          <label>نوع الصيانة <span class="req">*</span></label>
+          <div class="maintenance-toggle">
+            <label><input type="radio" name="maintenanceType" value="PM" checked> صيانة دورية (PM) — المعدة شغالة</label>
+            <label><input type="radio" name="maintenanceType" value="BD"> عطل (BD) — المعدة متوقفة</label>
+          </div>
+        </div>
 
-      <div class="field full">
-        <label>نوع الصيانة <span class="req">*</span></label>
-        <div class="maintenance-toggle">
-          <label><input type="radio" name="maintenanceType" value="PM" checked> صيانة دورية (PM) — المعدة شغالة</label>
-          <label><input type="radio" name="maintenanceType" value="BD"> عطل (BD) — المعدة متوقفة</label>
+        <div>
+          <label>الإدارة <span class="req">*</span></label>
+          <select id="departmentId" required>
+            <option value="">جاري تحميل الإدارات...</option>
+          </select>
+        </div>
+        <div>
+          <label>الأولوية</label>
+          <select id="priority">
+            <option value="low">منخفضة</option>
+            <option value="medium" selected>متوسطة</option>
+            <option value="high">عالية</option>
+            <option value="critical">حرجة</option>
+          </select>
+        </div>
+
+        <div>
+          <label>السائق / المشغّل</label>
+          <input type="text" id="driverOperator">
+        </div>
+        <div>
+          <label>قراءة العداد وقت الدخول</label>
+          <input type="number" id="hourMeterAtEntry" step="0.01">
+        </div>
+
+        <div class="field-full">
+          <label>المشكلة المُبلّغ عنها <span class="req">*</span></label>
+          <textarea id="reportedProblem" required></textarea>
+        </div>
+
+        <div class="field-full">
+          <label>التشخيص المبدئي (اختياري)</label>
+          <textarea id="initialDiagnosis"></textarea>
+        </div>
+
+        <div class="field-full">
+          <label>ملاحظات</label>
+          <textarea id="notes"></textarea>
         </div>
       </div>
 
-      <div class="field">
-        <label>الإدارة <span class="req">*</span></label>
-        <select id="departmentId" required>
-          <option value="">جاري تحميل الإدارات...</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>الأولوية</label>
-        <select id="priority">
-          <option value="low">منخفضة</option>
-          <option value="medium" selected>متوسطة</option>
-          <option value="high">عالية</option>
-          <option value="critical">حرجة</option>
-        </select>
-      </div>
+      <button type="submit" class="btn btn-primary" id="addBtn" style="margin-top:16px;"><i data-lucide="log-in"></i> تسجيل الدخول للورشة</button>
+    </form>
 
-      <div class="field">
-        <label>السائق / المشغّل</label>
-        <input type="text" id="driverOperator">
-      </div>
-      <div class="field">
-        <label>قراءة العداد وقت الدخول</label>
-        <input type="number" id="hourMeterAtEntry" step="0.01">
-      </div>
+    <div id="status" class="status-msg"></div>
+  </div>
 
-      <div class="field full">
-        <label>المشكلة المُبلّغ عنها <span class="req">*</span></label>
-        <textarea id="reportedProblem" required></textarea>
-      </div>
+  <div class="card">
+    <h2>المعدات الموجودة داخل الورشة حاليًا</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>رقم الزيارة</th>
+          <th>المعدة</th>
+          <th>الإدارة</th>
+          <th>النوع</th>
+          <th>الأولوية</th>
+          <th>الحالة</th>
+          <th>تاريخ الدخول</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
 
-      <div class="field full">
-        <label>التشخيص المبدئي (اختياري)</label>
-        <textarea id="initialDiagnosis"></textarea>
-      </div>
-
-      <div class="field full">
-        <label>ملاحظات</label>
-        <textarea id="notes"></textarea>
-      </div>
-    </div>
-
-    <button type="submit" class="primary" id="addBtn">تسجيل الدخول للورشة</button>
-  </form>
-
-  <div id="status" class="status"></div>
-
-  <h2 style="font-size:16px; margin-top:32px;">المعدات الموجودة داخل الورشة حاليًا</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>رقم الزيارة</th>
-        <th>المعدة</th>
-        <th>الإدارة</th>
-        <th>النوع</th>
-        <th>الأولوية</th>
-        <th>الحالة</th>
-        <th>تاريخ الدخول</th>
-        <th>الإجراءات</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
-</div>
+</main>
 
 <script>
   // ---- Auth guard ----
@@ -217,8 +151,8 @@
   }
 
   const authUser = JSON.parse(authUserRaw);
-  document.getElementById('userLabel').textContent =
-    'مسجل دخول: ' + authUser.full_name + ' (' + authUser.role + ')';
+  document.getElementById('userName').textContent = authUser.full_name;
+  document.getElementById('userRole').textContent = authUser.role;
 
   document.getElementById('logoutBtn').addEventListener('click', function () {
     localStorage.removeItem('auth_token');
@@ -255,12 +189,11 @@
 
   function showStatus(message, type) {
     statusEl.textContent = message;
-    statusEl.className = 'status ' + (type || '');
+    statusEl.className = 'status-msg ' + (type === 'error' ? 'is-error' : type === 'ok' ? 'is-ok' : '');
   }
 
   let equipmentCache = {};
 
-  // ---- Load equipment dropdown (only equipment NOT already in the workshop) ----
   async function loadEquipmentOptions() {
     try {
       const res = await fetch('/api/equipment', { headers: authHeaders() });
@@ -292,15 +225,12 @@
     }
   }
 
-  // When an equipment is chosen, default the department dropdown to its
-  // registered department (still editable — see priority discussion earlier).
   equipmentSelect.addEventListener('change', function () {
     const selectedOption = equipmentSelect.selectedOptions[0];
     const deptId = selectedOption ? selectedOption.getAttribute('data-dept') : '';
     if (deptId) departmentSelect.value = deptId;
   });
 
-  // ---- Load departments dropdown ----
   async function loadDepartmentOptions() {
     try {
       const res = await fetch('/api/departments', { headers: authHeaders() });
@@ -322,13 +252,14 @@
   }
 
   const priorityLabels = { low: 'منخفضة', medium: 'متوسطة', high: 'عالية', critical: 'حرجة' };
+  const priorityBadgeClass = { low: 'badge-neutral', medium: 'badge-warning', high: 'badge-warning', critical: 'badge-danger' };
+  const typeBadgeClass = { PM: 'badge-info', BD: 'badge-danger' };
   const progressLabels = {
     waiting: 'في الانتظار', inspection: 'جاري الفحص', repairing: 'جاري الإصلاح',
     waiting_spare_parts: 'انتظار قطع غيار', testing: 'اختبار', completed: 'مكتملة',
     delivered: 'تم التسليم', cancelled: 'ملغاة',
   };
 
-  // ---- Load open workshop entries ----
   async function loadOpenEntries() {
     showStatus('جاري التحميل...', '');
     try {
@@ -342,26 +273,27 @@
       }
 
       if (body.data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد معدات داخل الورشة حاليًا</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8" class="empty-row">لا يوجد معدات داخل الورشة حاليًا</td></tr>';
       } else {
         tableBody.innerHTML = body.data.map(function (entry) {
           return '<tr>' +
-            '<td>' + escapeHtml(entry.entry_number) + '</td>' +
-            '<td>' + escapeHtml(entry.equipment_code) + '</td>' +
+            '<td class="cell-mono">' + escapeHtml(entry.entry_number) + '</td>' +
+            '<td class="cell-mono">' + escapeHtml(entry.equipment_code) + '</td>' +
             '<td>' + escapeHtml(entry.department_name) + '</td>' +
-            '<td><span class="badge ' + entry.maintenance_type + '">' + entry.maintenance_type + '</span></td>' +
-            '<td><span class="badge ' + entry.priority + '">' + priorityLabels[entry.priority] + '</span></td>' +
+            '<td><span class="badge ' + typeBadgeClass[entry.maintenance_type] + '">' + entry.maintenance_type + '</span></td>' +
+            '<td><span class="badge ' + priorityBadgeClass[entry.priority] + '">' + priorityLabels[entry.priority] + '</span></td>' +
             '<td>' + (progressLabels[entry.progress_status] || '-') + '</td>' +
-            '<td>' + entry.entry_date + ' ' + entry.entry_time + '</td>' +
+            '<td class="cell-mono">' + entry.entry_date + ' ' + entry.entry_time + '</td>' +
             '<td>' +
-              (entry.status === 'open' ? '<a href="workshop-entry-close.html?id=' + entry.id + '" style="color:#16a34a; text-decoration:underline; font-size:13px; margin-inline-end:8px;">إقفال</a>' : '') +
-              '<a href="job-card.html?id=' + entry.job_card_id + '" style="color:#2563eb; text-decoration:underline; font-size:13px;">بطاقة الشغل</a>' +
+              (entry.status === 'open' ? '<a href="workshop-entry-close.html?id=' + entry.id + '" class="btn-link link-success"><i data-lucide="log-out"></i> إقفال</a> ' : '') +
+              '<a href="job-card.html?id=' + entry.job_card_id + '" class="btn-link link-edit"><i data-lucide="file-text"></i> بطاقة الشغل</a>' +
             '</td>' +
             '</tr>';
         }).join('');
       }
 
       showStatus('تم التحميل بنجاح (' + body.data.length + ' زيارة مفتوحة)', 'ok');
+      if (window.lucide) lucide.createIcons();
     } catch (err) {
       showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
     }
@@ -414,6 +346,7 @@
   loadEquipmentOptions();
   loadDepartmentOptions();
   loadOpenEntries();
+  if (window.lucide) lucide.createIcons();
 </script>
 
 </body>
