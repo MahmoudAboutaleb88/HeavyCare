@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeavyCare — لوحة التحكم</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-card);
+    border-top: 3px solid var(--color-border-strong);
+  }
+  .kpi-card.accent-amber { border-top-color: var(--color-amber); }
+  .kpi-card.accent-success { border-top-color: var(--color-success); }
+  .kpi-card.accent-danger { border-top-color: var(--color-danger); }
+  .kpi-card.accent-info { border-top-color: var(--color-info); }
+  .kpi-card .kpi-label {
+    font-size: 12px;
+    color: var(--color-ink-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .kpi-card .kpi-label svg { width: 14px; height: 14px; }
+  .kpi-card .kpi-value {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+  .kpi-card .kpi-sub { font-size: 11.5px; color: var(--color-ink-muted); margin-top: 2px; }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+  }
+  .chart-wrap { position: relative; height: 260px; }
+
+  .rank-list { list-style: none; margin: 0; padding: 0; }
+  .rank-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 13.5px;
+  }
+  .rank-list li:last-child { border-bottom: none; }
+  .rank-list .rank-name { display: flex; align-items: center; gap: 8px; }
+  .rank-badge {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--color-bg); color: var(--color-ink-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .rank-list li:first-child .rank-badge { background: var(--color-amber); color: var(--color-steel); }
+
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
+  </div>
+  <nav class="nav-pills">
+    <a href="dashboard.html" class="nav-pill active"><i data-lucide="gauge"></i> اللوحة</a>
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+    <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
+    <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+  </nav>
+  <div class="session">
+    <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
+    <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
+  </div>
+</header>
+
+<main class="page page-wide">
+
+  <div class="nameplate">
+    <div class="eyebrow">WORKSHOP OVERVIEW · LIVE</div>
+    <h1>لوحة التحكم</h1>
+    <p>نظرة شاملة على حالة الورشة والمعدات</p>
+  </div>
+
+  <div id="loadingBox" style="text-align:center; color:var(--color-ink-muted); padding:40px 0;">جاري تحميل الإحصائيات...</div>
+
+  <div id="content" style="display:none;">
+
+    <div class="kpi-grid">
+      <div class="kpi-card accent-info">
+        <div class="kpi-label"><i data-lucide="truck"></i> إجمالي المعدات</div>
+        <div class="kpi-value" id="kpiTotalEquipment">-</div>
+        <div class="kpi-sub" id="kpiEquipmentBreakdown"></div>
+      </div>
+      <div class="kpi-card accent-amber">
+        <div class="kpi-label"><i data-lucide="clipboard-list"></i> داخل الورشة الآن</div>
+        <div class="kpi-value" id="kpiOpenEntries">-</div>
+        <div class="kpi-sub" id="kpiOpenBreakdown"></div>
+      </div>
+      <div class="kpi-card accent-success">
+        <div class="kpi-label"><i data-lucide="check-circle"></i> اتقفلت الشهر ده</div>
+        <div class="kpi-value" id="kpiClosedThisMonth">-</div>
+        <div class="kpi-sub">زيارة مكتملة</div>
+      </div>
+      <div class="kpi-card accent-danger">
+        <div class="kpi-label"><i data-lucide="timer"></i> متوسط وقت الإصلاح</div>
+        <div class="kpi-value" id="kpiAvgDuration" style="font-size:18px;">-</div>
+        <div class="kpi-sub">PM بالساعات · BD بالأيام</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="card">
+        <h2>الزيارات في آخر 6 شهور</h2>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>التوزيع حسب الإدارة (داخل الورشة حاليًا)</h2>
+        <div class="chart-wrap"><canvas id="deptChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h2>أكثر المعدات دخولًا للورشة</h2>
+      <ul class="rank-list" id="topEquipmentList"></ul>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // ---- Auth guard ----
+  const authToken = localStorage.getItem('auth_token');
+  const authUserRaw = localStorage.getItem('auth_user');
+
+  if (!authToken || !authUserRaw) {
+    window.location.href = 'login.html';
+    throw new Error('Not authenticated');
+  }
+
+  const authUser = JSON.parse(authUserRaw);
+  document.getElementById('userName').textContent = authUser.full_name;
+  document.getElementById('userRole').textContent = authUser.role;
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = 'login.html';
+  });
+
+  function authHeaders(extra) {
+    return Object.assign({ Authorization: 'Bearer ' + authToken }, extra || {});
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  const loadingBox = document.getElementById('loadingBox');
+  const contentBox = document.getElementById('content');
+
+  const CHART_COLORS = {
+    amber: '#F2A900',
+    steel: '#2B3440',
+    success: '#4F772D',
+    danger: '#C1121F',
+    info: '#2E5C8A',
+    grid: '#DCD8CE',
+  };
+
+  async function loadDashboard() {
+    try {
+      const res = await fetch('/api/dashboard', { headers: authHeaders() });
+      if (res.status === 401) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = 'login.html';
+        return;
+      }
+      const body = await res.json();
+
+      if (!body.success) {
+        loadingBox.textContent = 'خطأ: ' + body.error;
+        return;
+      }
+
+      const data = body.data;
+
+      // ---- KPI cards ----
+      document.getElementById('kpiTotalEquipment').textContent = data.equipment.total;
+      document.getElementById('kpiEquipmentBreakdown').textContent =
+        'متاحة ' + data.equipment.available + ' · معطلة ' + data.equipment.breakdown;
+
+      document.getElementById('kpiOpenEntries').textContent = data.entries.open_total;
+      document.getElementById('kpiOpenBreakdown').textContent =
+        'PM ' + data.entries.open_pm + ' · BD ' + data.entries.open_bd;
+
+      document.getElementById('kpiClosedThisMonth').textContent = data.entries.closed_this_month;
+
+      const avgParts = [];
+      if (data.avg_duration.hours_pm !== null) avgParts.push(data.avg_duration.hours_pm + ' ساعة (PM)');
+      if (data.avg_duration.days_bd !== null) avgParts.push(data.avg_duration.days_bd + ' يوم (BD)');
+      document.getElementById('kpiAvgDuration').textContent = avgParts.length ? avgParts.join(' · ') : 'لا توجد بيانات بعد';
+
+      // ---- Monthly trend chart ----
+      const monthLabels = data.monthly_trend.map(function (m) { return m.month; });
+      const monthCounts = data.monthly_trend.map(function (m) { return m.count; });
+
+      new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+          labels: monthLabels,
+          datasets: [{
+            label: 'عدد الزيارات',
+            data: monthCounts,
+            borderColor: CHART_COLORS.amber,
+            backgroundColor: 'rgba(242,169,0,0.15)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: CHART_COLORS.steel,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: CHART_COLORS.grid }, ticks: { precision: 0 } },
+            x: { grid: { display: false } },
+          },
+        },
+      });
+
+      // ---- Department distribution chart ----
+      const deptLabels = data.department_open_counts.map(function (d) { return d.department_name; });
+      const deptCounts = data.department_open_counts.map(function (d) { return d.count; });
+
+      if (deptLabels.length === 0) {
+        document.getElementById('deptChart').replaceWith(
+          Object.assign(document.createElement('div'), {
+            className: 'empty-row',
+            textContent: 'لا يوجد معدات داخل الورشة حاليًا',
+          })
+        );
+      } else {
+        new Chart(document.getElementById('deptChart'), {
+          type: 'doughnut',
+          data: {
+            labels: deptLabels,
+            datasets: [{
+              data: deptCounts,
+              backgroundColor: [CHART_COLORS.amber, CHART_COLORS.info, CHART_COLORS.success, CHART_COLORS.danger, CHART_COLORS.steel, '#8A93A0', '#C88900', '#3F611F'],
+              borderWidth: 2,
+              borderColor: '#fff',
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { font: { family: 'IBM Plex Sans Arabic' }, boxWidth: 12 } } },
+          },
+        });
+      }
+
+      // ---- Top equipment ranking ----
+      const topList = document.getElementById('topEquipmentList');
+      if (data.top_equipment.length === 0) {
+        topList.innerHTML = '<li class="empty-row" style="display:block; text-align:center;">لا يوجد بيانات بعد</li>';
+      } else {
+        topList.innerHTML = data.top_equipment.map(function (eq, i) {
+          return '<li>' +
+            '<span class="rank-name"><span class="rank-badge">' + (i + 1) + '</span> ' +
+            '<span class="cell-mono">' + escapeHtml(eq.code) + '</span>' +
+            (eq.equipment_type ? ' — ' + escapeHtml(eq.equipment_type) : '') + '</span>' +
+            '<strong class="cell-mono">' + eq.visit_count + ' زيارة</strong>' +
+            '</li>';
+        }).join('');
+      }
+
+      loadingBox.style.display = 'none';
+      contentBox.style.display = 'block';
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      loadingBox.textContent = 'تعذر الاتصال بالخادم: ' + err.message;
+    }
+  }
+
+  loadDashboard();
+  if (window.lucide) lucide.createIcons();
+</script>
+
+</body>
+</html>
