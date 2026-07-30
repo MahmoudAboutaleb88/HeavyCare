@@ -3,42 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>بطاقة الشغل</title>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-    background: #f4f6f8;
-    margin: 0;
-    padding: 40px 20px;
-    color: #1f2937;
-  }
-  .container {
-    max-width: 760px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    padding: 28px;
-  }
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f1f3;
-    font-size: 13px;
-    color: #6b7280;
-  }
-  .topbar a { color: #2563eb; text-decoration: none; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  h2 { font-size: 15px; margin: 28px 0 12px; color: #374151; }
-  p.subtitle { color: #6b7280; margin: 0 0 20px; font-size: 14px; }
+<title>HeavyCare — بطاقة الشغل</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
   .summary {
-    background: #f9fafb;
-    border-radius: 8px;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
     padding: 14px 16px;
     margin-bottom: 20px;
     font-size: 13px;
@@ -46,171 +21,141 @@
     grid-template-columns: 1fr 1fr;
     gap: 6px 16px;
   }
-  .summary strong { color: #374151; }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px 16px;
-    margin-bottom: 8px;
-  }
-  .field { display: flex; flex-direction: column; }
-  .field.full { grid-column: 1 / -1; }
-  label { font-size: 13px; margin-bottom: 4px; color: #374151; }
-  input, select, textarea {
-    padding: 9px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-  }
-  textarea { resize: vertical; min-height: 60px; }
-
-  button.primary {
-    background: #2563eb;
-    color: white;
-    border: none;
-    padding: 11px 22px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    margin-top: 14px;
-  }
-  button.primary:hover { background: #1d4ed8; }
-  button.primary:disabled { background: #93a3ba; cursor: not-allowed; }
-  button.small {
-    background: #2563eb;
-    color: white;
-    border: none;
-    padding: 9px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  button.small:hover { background: #1d4ed8; }
-
-  .status { font-size: 13px; margin: 12px 0; min-height: 18px; white-space: pre-wrap; }
-  .status.error { color: #dc2626; }
-  .status.ok { color: #16a34a; }
-  .loading { text-align: center; color: #9ca3af; padding: 40px 0; }
-
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
-  th, td { text-align: right; padding: 8px; border-bottom: 1px solid #f0f1f3; }
-  th { color: #6b7280; font-weight: 600; background: #f9fafb; }
-  .row-btn { background: none; border: none; color: #dc2626; text-decoration: underline; font-size: 13px; cursor: pointer; padding: 0; }
-  .empty { color: #9ca3af; font-size: 13px; padding: 12px 0; text-align: center; }
-
-  .parts-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; margin-top: 12px; align-items: end; }
-  .parts-form .field label { font-size: 12px; }
-
+  .summary strong { color: var(--color-ink); }
+  .loading { text-align: center; color: var(--color-ink-muted); padding: 60px 0; }
+  .back-link { display: inline-flex; align-items: center; gap: 4px; color: var(--color-ink-muted); text-decoration: none; font-size: 13px; margin-bottom: 16px; }
+  .back-link svg { width: 14px; height: 14px; }
+  .parts-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; margin-top: 14px; align-items: end; }
   .total-box {
-    background: #eff6ff;
-    border-radius: 8px;
-    padding: 14px 16px;
-    margin-top: 16px;
+    background: linear-gradient(135deg, #FBF0DD 0%, #F6E4C0 100%);
+    border: 1px solid var(--color-amber);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    margin-top: 18px;
     font-size: 14px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
   }
-  .total-box strong { font-size: 16px; color: #1d4ed8; }
+  .total-box strong { font-size: 20px; font-family: var(--font-mono); color: var(--color-amber-dark); }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <div class="topbar">
-    <a href="workshop-entries.html">← رجوع لدخول الورشة</a>
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
   </div>
+  <nav class="nav-pills">
+    <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+    <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
+    <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+  </nav>
+</header>
+
+<main class="page page-narrow">
+  <a href="workshop-entries.html" class="back-link"><i data-lucide="arrow-right"></i> رجوع لدخول الورشة</a>
 
   <div id="loadingBox" class="loading">جاري تحميل بطاقة الشغل...</div>
 
   <div id="content" style="display:none;">
-    <h1>بطاقة الشغل</h1>
-    <p class="subtitle" id="subtitle"></p>
-
-    <div class="summary" id="summaryBox"></div>
-
-    <form id="jobCardForm">
-      <div class="form-grid">
-        <div class="field full">
-          <label>التشخيص</label>
-          <textarea id="diagnosis"></textarea>
-        </div>
-        <div class="field full">
-          <label>السبب الجذري</label>
-          <textarea id="rootCause"></textarea>
-        </div>
-        <div class="field full">
-          <label>نتائج الفحص</label>
-          <textarea id="inspectionResults"></textarea>
-        </div>
-
-        <div class="field">
-          <label>الفني المسؤول</label>
-          <select id="assignedTechnician">
-            <option value="">جاري التحميل...</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>حالة التقدم</label>
-          <select id="progressStatus">
-            <option value="waiting">في الانتظار</option>
-            <option value="inspection">جاري الفحص</option>
-            <option value="repairing">جاري الإصلاح</option>
-            <option value="waiting_spare_parts">انتظار قطع غيار</option>
-            <option value="testing">اختبار</option>
-            <option value="completed">مكتملة</option>
-            <option value="delivered">تم التسليم</option>
-            <option value="cancelled">ملغاة</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label>تكلفة العمالة</label>
-          <input type="number" id="laborCost" step="0.01" value="0">
-        </div>
-
-        <div class="field full">
-          <label>ملاحظات الفني</label>
-          <textarea id="technicianNotes"></textarea>
-        </div>
-      </div>
-
-      <button type="submit" class="primary" id="saveBtn">حفظ بطاقة الشغل</button>
-    </form>
-
-    <div id="status" class="status"></div>
-
-    <h2>قطع الغيار المستخدمة</h2>
-    <table>
-      <thead>
-        <tr><th>القطعة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th></th></tr>
-      </thead>
-      <tbody id="partsBody"></tbody>
-    </table>
-
-    <div class="parts-form">
-      <div class="field">
-        <label>اسم القطعة</label>
-        <input type="text" id="partName">
-      </div>
-      <div class="field">
-        <label>الكمية</label>
-        <input type="number" id="partQuantity" value="1" min="1">
-      </div>
-      <div class="field">
-        <label>سعر الوحدة</label>
-        <input type="number" id="partUnitCost" value="0" step="0.01" min="0">
-      </div>
-      <button type="button" class="small" id="addPartBtn">إضافة</button>
+    <div class="nameplate">
+      <div class="eyebrow">MAINTENANCE FILE · JOB CARD</div>
+      <h1>بطاقة الشغل</h1>
+      <p id="subtitle"></p>
     </div>
 
-    <div class="total-box">
-      <span>إجمالي التكلفة (قطع غيار + عمالة)</span>
-      <strong id="totalCost">0</strong>
+    <div class="card">
+      <div class="summary" id="summaryBox"></div>
+
+      <form id="jobCardForm">
+        <div class="form-grid">
+          <div class="field-full">
+            <label>التشخيص</label>
+            <textarea id="diagnosis"></textarea>
+          </div>
+          <div class="field-full">
+            <label>السبب الجذري</label>
+            <textarea id="rootCause"></textarea>
+          </div>
+          <div class="field-full">
+            <label>نتائج الفحص</label>
+            <textarea id="inspectionResults"></textarea>
+          </div>
+
+          <div>
+            <label>الفني المسؤول</label>
+            <select id="assignedTechnician">
+              <option value="">جاري التحميل...</option>
+            </select>
+          </div>
+          <div>
+            <label>حالة التقدم</label>
+            <select id="progressStatus">
+              <option value="waiting">في الانتظار</option>
+              <option value="inspection">جاري الفحص</option>
+              <option value="repairing">جاري الإصلاح</option>
+              <option value="waiting_spare_parts">انتظار قطع غيار</option>
+              <option value="testing">اختبار</option>
+              <option value="completed">مكتملة</option>
+              <option value="delivered">تم التسليم</option>
+              <option value="cancelled">ملغاة</option>
+            </select>
+          </div>
+
+          <div>
+            <label>تكلفة العمالة</label>
+            <input type="number" id="laborCost" step="0.01" value="0">
+          </div>
+
+          <div class="field-full">
+            <label>ملاحظات الفني</label>
+            <textarea id="technicianNotes"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="saveBtn" style="margin-top:14px;"><i data-lucide="save"></i> حفظ بطاقة الشغل</button>
+      </form>
+
+      <div id="status" class="status-msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>قطع الغيار المستخدمة</h2>
+      <table class="data-table">
+        <thead>
+          <tr><th>القطعة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th></th></tr>
+        </thead>
+        <tbody id="partsBody"></tbody>
+      </table>
+
+      <div class="parts-form">
+        <div>
+          <label>اسم القطعة</label>
+          <input type="text" id="partName">
+        </div>
+        <div>
+          <label>الكمية</label>
+          <input type="number" id="partQuantity" value="1" min="1">
+        </div>
+        <div>
+          <label>سعر الوحدة</label>
+          <input type="number" id="partUnitCost" value="0" step="0.01" min="0">
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="addPartBtn"><i data-lucide="plus"></i> إضافة</button>
+      </div>
+
+      <div class="total-box">
+        <span>إجمالي التكلفة (قطع غيار + عمالة)</span>
+        <strong id="totalCost">0</strong>
+      </div>
     </div>
   </div>
-</div>
+</main>
 
 <script>
   // ---- Auth guard ----
@@ -260,7 +205,7 @@
 
   function showStatus(message, type) {
     statusEl.textContent = message;
-    statusEl.className = 'status ' + (type || '');
+    statusEl.className = 'status-msg ' + (type === 'error' ? 'is-error' : type === 'ok' ? 'is-ok' : '');
   }
 
   let currentLaborCost = 0;
@@ -298,19 +243,21 @@
     updateTotalCost();
 
     if (parts.length === 0) {
-      partsBody.innerHTML = '<tr><td colspan="5" class="empty">لا يوجد قطع غيار مضافة بعد</td></tr>';
+      partsBody.innerHTML = '<tr><td colspan="5" class="empty-row">لا يوجد قطع غيار مضافة بعد</td></tr>';
       return;
     }
 
     partsBody.innerHTML = parts.map(function (p) {
       return '<tr>' +
         '<td>' + escapeHtml(p.part_name) + '</td>' +
-        '<td>' + p.quantity + '</td>' +
-        '<td>' + p.unit_cost + '</td>' +
-        '<td>' + p.total_cost + '</td>' +
-        '<td><button type="button" class="row-btn" data-part-id="' + p.id + '">حذف</button></td>' +
+        '<td class="cell-mono">' + p.quantity + '</td>' +
+        '<td class="cell-mono">' + p.unit_cost + '</td>' +
+        '<td class="cell-mono">' + p.total_cost + '</td>' +
+        '<td><button type="button" class="btn-link link-danger" data-part-id="' + p.id + '"><i data-lucide="trash-2"></i></button></td>' +
         '</tr>';
     }).join('');
+
+    if (window.lucide) lucide.createIcons();
   }
 
   async function loadJobCard() {
@@ -352,6 +299,7 @@
 
       loadingBox.style.display = 'none';
       contentBox.style.display = 'block';
+      if (window.lucide) lucide.createIcons();
     } catch (err) {
       loadingBox.textContent = 'تعذر الاتصال بالخادم: ' + err.message;
     }
@@ -434,8 +382,9 @@
   });
 
   partsBody.addEventListener('click', async function (e) {
-    const partId = e.target.getAttribute('data-part-id');
-    if (!partId) return;
+    const target = e.target.closest('[data-part-id]');
+    if (!target) return;
+    const partId = target.getAttribute('data-part-id');
 
     const confirmed = window.confirm('هل أنت متأكد من حذف هذه القطعة؟');
     if (!confirmed) return;
@@ -461,6 +410,7 @@
   });
 
   loadJobCard();
+  if (window.lucide) lucide.createIcons();
 </script>
 
 </body>
