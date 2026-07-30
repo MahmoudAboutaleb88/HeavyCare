@@ -469,22 +469,149 @@ async function equipmentItem(req, res, params) {
 }
 
 // ============================================================================
-// USERS handlers (read-only for now)
+// USERS handlers
 // ============================================================================
+// Only admins can create/edit accounts — this controls who gets into the
+// system at all, so it's kept tighter than other modules.
+
+const CAN_MANAGE_USERS = ['admin'];
+const VALID_ROLES = ['admin', 'workshop_manager', 'supervisor', 'technician', 'viewer'];
 
 async function usersCollection(req, res) {
   const user = requireAuth(req);
   if (!user) return sendError(res, 401, 'Unauthorized — please log in');
-  if (req.method !== 'GET') return sendError(res, 405, 'Method not allowed');
+
+  if (req.method === 'GET') {
+    try {
+      // Dropdowns elsewhere (assign technician, etc.) only want active users.
+      // The user-management page itself needs to see everyone, including
+      // deactivated accounts, so it can reactivate them — but only an
+      // admin is allowed to ask for that.
+      const includeInactive = req.query.include_inactive === '1' && user.role === 'admin';
+
+      const rows = await query(
+        `SELECT u.id, u.full_name, u.username, u.role, u.department_id,
+                d.name AS department_name, u.is_active, u.created_at
+         FROM users u
+         LEFT JOIN departments d ON d.id = u.department_id
+         ${includeInactive ? '' : 'WHERE u.is_active = TRUE'}
+         ORDER BY u.full_name ASC`
+      );
+      return sendSuccess(res, 200, rows);
+    } catch (err) {
+      console.error('GET /api/users failed:', err);
+      return sendError(res, 500, 'Failed to load users');
+    }
+  }
+
+  if (req.method === 'POST') {
+    if (!CAN_MANAGE_USERS.includes(user.role)) {
+      return sendError(res, 403, 'You do not have permission to create users');
+    }
+    try {
+      const body = req.body || {};
+      const fullName = String(body.full_name || '').trim();
+      const username = String(body.username || '').trim().toLowerCase();
+      const password = body.password || '';
+      const role = body.role;
+      const departmentId = body.department_id ? Number(body.department_id) : null;
+
+      if (!fullName) return sendError(res, 400, 'Full name is required');
+      if (!username) return sendError(res, 400, 'Username is required');
+      if (!password || password.length < 8) return sendError(res, 400, 'Password must be at least 8 characters');
+      if (!VALID_ROLES.includes(role)) return sendError(res, 400, 'Invalid role');
+
+      if (departmentId) {
+        const dept = await query('SELECT id FROM departments WHERE id = ? AND is_active = TRUE', [departmentId]);
+        if (dept.length === 0) return sendError(res, 400, 'Selected department does not exist');
+      }
+
+      const passwordHash = await hashPassword(password);
+      const result = await query(
+        `INSERT INTO users (full_name, username, password_hash, role, department_id, is_active)
+         VALUES (?, ?, ?, ?, ?, TRUE)`,
+        [fullName, username, passwordHash, role, departmentId]
+      );
+
+      const [created] = await query(
+        `SELECT u.id, u.full_name, u.username, u.role, u.department_id,
+                d.name AS department_name, u.is_active, u.created_at
+         FROM users u LEFT JOIN departments d ON d.id = u.department_id WHERE u.id = ?`,
+        [result.insertId]
+      );
+      return sendSuccess(res, 201, created);
+    } catch (err) {
+      if (err && err.code === 'ER_DUP_ENTRY') {
+        return sendError(res, 409, 'اسم المستخدم ده مستخدم بالفعل');
+      }
+      console.error('POST /api/users failed:', err);
+      return sendError(res, 500, 'Failed to create user');
+    }
+  }
+
+  return sendError(res, 405, 'Method not allowed');
+}
+
+async function userItem(req, res, params) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+  if (req.method !== 'PUT') return sendError(res, 405, 'Method not allowed');
+  if (!CAN_MANAGE_USERS.includes(user.role)) {
+    return sendError(res, 403, 'You do not have permission to edit users');
+  }
+
+  const id = Number(params.id);
+  if (!id) return sendError(res, 400, 'Invalid user id');
 
   try {
-    const rows = await query(
-      `SELECT id, full_name, username, role FROM users WHERE is_active = TRUE ORDER BY full_name ASC`
+    const existing = await query('SELECT id FROM users WHERE id = ?', [id]);
+    if (existing.length === 0) return sendError(res, 404, 'User not found');
+
+    const body = req.body || {};
+    const fullName = String(body.full_name || '').trim();
+    const role = body.role;
+    const departmentId = body.department_id ? Number(body.department_id) : null;
+    const isActive = body.is_active !== false; // defaults true unless explicitly false
+    const newPassword = body.password || '';
+
+    if (!fullName) return sendError(res, 400, 'Full name is required');
+    if (!VALID_ROLES.includes(role)) return sendError(res, 400, 'Invalid role');
+
+    // Safety guard: an admin can't lock themselves out by deactivating
+    // their own account.
+    if (id === user.sub && !isActive) {
+      return sendError(res, 400, 'لا يمكنك إيقاف حسابك الخاص');
+    }
+
+    if (departmentId) {
+      const dept = await query('SELECT id FROM departments WHERE id = ? AND is_active = TRUE', [departmentId]);
+      if (dept.length === 0) return sendError(res, 400, 'Selected department does not exist');
+    }
+
+    if (newPassword) {
+      if (newPassword.length < 8) return sendError(res, 400, 'Password must be at least 8 characters');
+      const passwordHash = await hashPassword(newPassword);
+      await query(
+        `UPDATE users SET full_name = ?, role = ?, department_id = ?, is_active = ?, password_hash = ? WHERE id = ?`,
+        [fullName, role, departmentId, isActive, passwordHash, id]
+      );
+    } else {
+      await query(
+        `UPDATE users SET full_name = ?, role = ?, department_id = ?, is_active = ? WHERE id = ?`,
+        [fullName, role, departmentId, isActive, id]
+      );
+    }
+
+    const [updated] = await query(
+      `SELECT u.id, u.full_name, u.username, u.role, u.department_id,
+              d.name AS department_name, u.is_active, u.created_at
+       FROM users u LEFT JOIN departments d ON d.id = u.department_id WHERE u.id = ?`,
+      [id]
     );
-    return sendSuccess(res, 200, rows);
+    return sendSuccess(res, 200, updated);
   } catch (err) {
-    console.error('GET /api/users failed:', err);
-    return sendError(res, 500, 'Failed to load users');
+    console.error('PUT /api/users/[id] failed:', err);
+    return sendError(res, 500, 'Failed to update user');
   }
 }
 
@@ -923,12 +1050,162 @@ async function jobCardPartItem(req, res, params) {
 }
 
 // ============================================================================
+// REPORTS handler
+// ============================================================================
+// One flexible endpoint covers every report type from the spec (equipment
+// history, department report, daily/monthly, breakdown-only, PM-only,
+// downtime, cost) — they're all just different filter combinations over
+// the same underlying workshop_entries data, so one query + query-string
+// filters is more maintainable than eight near-identical endpoints.
+
+async function reportsWorkshopEntries(req, res) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+  if (req.method !== 'GET') return sendError(res, 405, 'Method not allowed');
+
+  try {
+    const { date_from, date_to, department_id, equipment_id, maintenance_type, status } = req.query;
+
+    const conditions = [];
+    const params = [];
+
+    if (date_from) { conditions.push('we.entry_date >= ?'); params.push(date_from); }
+    if (date_to) { conditions.push('we.entry_date <= ?'); params.push(date_to); }
+    if (department_id) { conditions.push('we.department_id = ?'); params.push(Number(department_id)); }
+    if (equipment_id) { conditions.push('we.equipment_id = ?'); params.push(Number(equipment_id)); }
+    if (maintenance_type && ['PM', 'BD'].includes(maintenance_type)) {
+      conditions.push('we.maintenance_type = ?'); params.push(maintenance_type);
+    }
+    if (status && ['open', 'closed'].includes(status)) {
+      conditions.push('we.status = ?'); params.push(status);
+    }
+
+    const whereClause = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    const rows = await query(
+      `SELECT
+         we.id, we.entry_number, we.entry_date, we.entry_time,
+         we.exit_date, we.exit_time, we.maintenance_type, we.priority,
+         we.status, we.reported_problem, we.duration_hours, we.duration_days,
+         e.code AS equipment_code, e.equipment_type,
+         d.name AS department_name,
+         jc.progress_status, jc.labor_cost,
+         COALESCE(
+           (SELECT SUM(total_cost) FROM job_card_parts WHERE job_card_id = jc.id),
+           0
+         ) AS parts_cost
+       FROM workshop_entries we
+       JOIN equipment e ON e.id = we.equipment_id
+       JOIN departments d ON d.id = we.department_id
+       LEFT JOIN job_cards jc ON jc.workshop_entry_id = we.id
+       ${whereClause}
+       ORDER BY we.entry_date DESC, we.entry_time DESC`,
+      params
+    );
+
+    return sendSuccess(res, 200, rows);
+  } catch (err) {
+    console.error('GET /api/reports/workshop-entries failed:', err);
+    return sendError(res, 500, 'Failed to generate report');
+  }
+}
+
+// ============================================================================
+// DASHBOARD handler
+// ============================================================================
+// One endpoint, one round trip: every KPI card and chart on the dashboard
+// comes from this single call instead of the page firing off 6 separate
+// requests.
+
+async function dashboardStats(req, res) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+  if (req.method !== 'GET') return sendError(res, 405, 'Method not allowed');
+
+  try {
+    const equipmentByStatus = await query(
+      `SELECT current_status, COUNT(*) AS count
+       FROM equipment WHERE is_archived = FALSE GROUP BY current_status`
+    );
+    const equipment = { total: 0, available: 0, in_workshop: 0, breakdown: 0 };
+    equipmentByStatus.forEach((row) => {
+      equipment[row.current_status] = row.count;
+      equipment.total += row.count;
+    });
+
+    const [openCounts] = await query(
+      `SELECT
+         COUNT(*) AS open_total,
+         SUM(CASE WHEN maintenance_type = 'PM' THEN 1 ELSE 0 END) AS open_pm,
+         SUM(CASE WHEN maintenance_type = 'BD' THEN 1 ELSE 0 END) AS open_bd
+       FROM workshop_entries WHERE status = 'open'`
+    );
+
+    const [closedThisMonth] = await query(
+      `SELECT COUNT(*) AS count FROM workshop_entries
+       WHERE status = 'closed' AND exit_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`
+    );
+
+    const [avgDuration] = await query(
+      `SELECT
+         AVG(CASE WHEN maintenance_type = 'PM' THEN duration_hours END) AS avg_hours_pm,
+         AVG(CASE WHEN maintenance_type = 'BD' THEN duration_days END) AS avg_days_bd
+       FROM workshop_entries WHERE status = 'closed'`
+    );
+
+    const departmentOpenCounts = await query(
+      `SELECT d.name AS department_name, COUNT(*) AS count
+       FROM workshop_entries we JOIN departments d ON d.id = we.department_id
+       WHERE we.status = 'open'
+       GROUP BY we.department_id ORDER BY count DESC LIMIT 8`
+    );
+
+    const topEquipment = await query(
+      `SELECT e.code, e.equipment_type, COUNT(*) AS visit_count
+       FROM workshop_entries we JOIN equipment e ON e.id = we.equipment_id
+       GROUP BY we.equipment_id ORDER BY visit_count DESC LIMIT 5`
+    );
+
+    const monthlyTrend = await query(
+      `SELECT DATE_FORMAT(entry_date, '%Y-%m') AS month, COUNT(*) AS count
+       FROM workshop_entries
+       WHERE entry_date >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
+       GROUP BY month ORDER BY month ASC`
+    );
+
+    return sendSuccess(res, 200, {
+      equipment,
+      entries: {
+        open_total: openCounts.open_total || 0,
+        open_pm: openCounts.open_pm || 0,
+        open_bd: openCounts.open_bd || 0,
+        closed_this_month: closedThisMonth.count || 0,
+      },
+      avg_duration: {
+        hours_pm: avgDuration.avg_hours_pm ? Math.round(avgDuration.avg_hours_pm * 10) / 10 : null,
+        days_bd: avgDuration.avg_days_bd ? Math.round(avgDuration.avg_days_bd * 10) / 10 : null,
+      },
+      department_open_counts: departmentOpenCounts,
+      top_equipment: topEquipment,
+      monthly_trend: monthlyTrend,
+    });
+  } catch (err) {
+    console.error('GET /api/dashboard failed:', err);
+    return sendError(res, 500, 'Failed to load dashboard statistics');
+  }
+}
+
+// ============================================================================
 // ROUTING TABLE
 // ============================================================================
 // Add new endpoints here as the project grows — this is the only place
 // that needs to change to wire up a new route.
 
 const routes = [
+  { pattern: ['reports', 'workshop-entries'], methods: { GET: reportsWorkshopEntries } },
+
+  { pattern: ['dashboard'], methods: { GET: dashboardStats } },
+
   { pattern: ['auth', 'login'], methods: { POST: authLogin } },
   { pattern: ['auth', 'me'], methods: { GET: authMe } },
   { pattern: ['auth', 'setup-admin'], methods: { POST: authSetupAdmin } },
@@ -939,7 +1216,8 @@ const routes = [
   { pattern: ['equipment'], methods: { GET: equipmentCollection, POST: equipmentCollection } },
   { pattern: ['equipment', ':id'], methods: { GET: equipmentItem, PUT: equipmentItem, DELETE: equipmentItem } },
 
-  { pattern: ['users'], methods: { GET: usersCollection } },
+  { pattern: ['users'], methods: { GET: usersCollection, POST: usersCollection } },
+  { pattern: ['users', ':id'], methods: { PUT: userItem } },
 
   { pattern: ['workshop-entries'], methods: { GET: workshopEntriesCollection, POST: workshopEntriesCollection } },
   { pattern: ['workshop-entries', ':id'], methods: { GET: workshopEntryItem } },
