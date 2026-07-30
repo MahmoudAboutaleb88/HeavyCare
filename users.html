@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeavyCare — إدارة المستخدمين</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .role-select-hint { font-size: 11.5px; color: var(--color-ink-muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
+  </div>
+  <nav class="nav-pills">
+    <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+    <a href="users.html" class="nav-pill active"><i data-lucide="users"></i> المستخدمين</a>
+    <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+  </nav>
+  <div class="session">
+    <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
+    <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
+  </div>
+</header>
+
+<main class="page page-wide">
+
+  <div class="nameplate">
+    <div class="eyebrow">SYSTEM ACCESS · USERS</div>
+    <h1 id="formTitle">إضافة مستخدم جديد</h1>
+    <p>الفنيين والمشرفين اللي هيستخدموا النظام</p>
+  </div>
+
+  <div id="adminOnlyNotice" class="card" style="display:none;">
+    <p style="margin:0; color:var(--color-ink-muted); display:flex; align-items:center; gap:8px;">
+      <i data-lucide="lock"></i> إدارة المستخدمين (إضافة/تعديل) متاحة للـ Admin بس. تقدر تشوف القائمة، بس مش هتقدر تعدّل.
+    </p>
+  </div>
+
+  <div class="card" id="formCard">
+    <form id="userForm">
+      <div class="form-grid">
+        <div>
+          <label>الاسم الكامل <span class="req">*</span></label>
+          <input type="text" id="fullName" required>
+        </div>
+        <div>
+          <label>اسم المستخدم (Username) <span class="req">*</span></label>
+          <input type="text" id="username" required>
+          <div class="role-select-hint" id="usernameHint"></div>
+        </div>
+
+        <div>
+          <label>الصلاحية <span class="req">*</span></label>
+          <select id="role" required>
+            <option value="technician">فني</option>
+            <option value="supervisor">مشرف</option>
+            <option value="workshop_manager">مدير ورشة</option>
+            <option value="admin">Admin</option>
+            <option value="viewer">مشاهد فقط</option>
+          </select>
+        </div>
+        <div>
+          <label>الإدارة (اختياري)</label>
+          <select id="departmentId">
+            <option value="">بدون تحديد</option>
+          </select>
+        </div>
+
+        <div class="field-full" id="passwordField">
+          <label>كلمة السر <span class="req" id="passwordReq">*</span></label>
+          <input type="password" id="password" minlength="8">
+          <div class="role-select-hint" id="passwordHint">8 أحرف على الأقل</div>
+        </div>
+
+        <div class="field-full" id="activeField" style="display:none;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="isActive" style="width:auto;" checked>
+            الحساب مفعّل (شِل العلامة عشان توقف دخول المستخدم للنظام)
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <button type="submit" class="btn btn-primary" id="saveBtn"><i data-lucide="user-plus"></i> إضافة المستخدم</button>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display:none;"><i data-lucide="x"></i> إلغاء التعديل</button>
+      </div>
+    </form>
+
+    <div id="status" class="status-msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>المستخدمين المسجّلين</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>اسم المستخدم</th>
+          <th>الصلاحية</th>
+          <th>الإدارة</th>
+          <th>الحالة</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+  // ---- Auth guard ----
+  const authToken = localStorage.getItem('auth_token');
+  const authUserRaw = localStorage.getItem('auth_user');
+
+  if (!authToken || !authUserRaw) {
+    window.location.href = 'login.html';
+    throw new Error('Not authenticated');
+  }
+
+  const authUser = JSON.parse(authUserRaw);
+  document.getElementById('userName').textContent = authUser.full_name;
+  document.getElementById('userRole').textContent = authUser.role;
+
+  const isAdmin = authUser.role === 'admin';
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = 'login.html';
+  });
+
+  function authHeaders(extra) {
+    return Object.assign({ Authorization: 'Bearer ' + authToken }, extra || {});
+  }
+
+  function handleUnauthorized(res) {
+    if (res.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      window.location.href = 'login.html';
+      return true;
+    }
+    return false;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  const roleLabels = {
+    admin: 'Admin', workshop_manager: 'مدير ورشة', supervisor: 'مشرف',
+    technician: 'فني', viewer: 'مشاهد فقط',
+  };
+
+  const statusEl = document.getElementById('status');
+  const tableBody = document.getElementById('tableBody');
+  const departmentSelect = document.getElementById('departmentId');
+  const formEl = document.getElementById('userForm');
+  const saveBtn = document.getElementById('saveBtn');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const formTitle = document.getElementById('formTitle');
+  const passwordInput = document.getElementById('password');
+  const passwordHint = document.getElementById('passwordHint');
+  const passwordReq = document.getElementById('passwordReq');
+  const activeField = document.getElementById('activeField');
+  const isActiveCheckbox = document.getElementById('isActive');
+
+  let editingId = null;
+  let usersCache = {};
+
+  // If not admin, disable the whole form (view-only mode).
+  if (!isAdmin) {
+    document.getElementById('adminOnlyNotice').style.display = 'block';
+    document.getElementById('formCard').style.display = 'none';
+  }
+
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'status-msg ' + (type === 'error' ? 'is-error' : type === 'ok' ? 'is-ok' : '');
+  }
+
+  function enterEditMode(u) {
+    editingId = u.id;
+    formTitle.textContent = 'تعديل المستخدم: ' + u.full_name;
+    saveBtn.innerHTML = '<i data-lucide="save"></i> حفظ التعديلات';
+    cancelEditBtn.style.display = 'inline-flex';
+
+    document.getElementById('fullName').value = u.full_name;
+    document.getElementById('username').value = u.username;
+    document.getElementById('username').disabled = true; // username can't change after creation
+    document.getElementById('usernameHint').textContent = 'اسم المستخدم مش قابل للتعديل بعد الإنشاء';
+    document.getElementById('role').value = u.role;
+    document.getElementById('departmentId').value = u.department_id || '';
+
+    passwordInput.required = false;
+    passwordReq.textContent = '';
+    passwordHint.textContent = 'سيب الحقل فاضي لو مش عايز تغيّر كلمة السر';
+
+    activeField.style.display = 'block';
+    isActiveCheckbox.checked = !!u.is_active;
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function exitEditMode() {
+    editingId = null;
+    formTitle.textContent = 'إضافة مستخدم جديد';
+    saveBtn.innerHTML = '<i data-lucide="user-plus"></i> إضافة المستخدم';
+    cancelEditBtn.style.display = 'none';
+    formEl.reset();
+
+    document.getElementById('username').disabled = false;
+    document.getElementById('usernameHint').textContent = '';
+    passwordInput.required = true;
+    passwordReq.textContent = '*';
+    passwordHint.textContent = '8 أحرف على الأقل';
+    activeField.style.display = 'none';
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  cancelEditBtn.addEventListener('click', exitEditMode);
+
+  async function loadDepartments() {
+    try {
+      const res = await fetch('/api/departments', { headers: authHeaders() });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+      if (!body.success) return;
+
+      departmentSelect.innerHTML = '<option value="">بدون تحديد</option>' +
+        body.data.map(function (d) {
+          return '<option value="' + d.id + '">' + escapeHtml(d.name) + '</option>';
+        }).join('');
+    } catch (err) { /* dropdown stays with default option */ }
+  }
+
+  async function loadUsers() {
+    showStatus('جاري التحميل...', '');
+    try {
+      const url = isAdmin ? '/api/users?include_inactive=1' : '/api/users';
+      const res = await fetch(url, { headers: authHeaders() });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+
+      if (!body.success) {
+        showStatus('خطأ: ' + body.error, 'error');
+        return;
+      }
+
+      usersCache = {};
+      body.data.forEach(function (u) { usersCache[u.id] = u; });
+
+      if (body.data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="empty-row">لا يوجد مستخدمين</td></tr>';
+      } else {
+        tableBody.innerHTML = body.data.map(function (u) {
+          const statusBadge = u.is_active
+            ? '<span class="badge badge-success">مفعّل</span>'
+            : '<span class="badge badge-neutral">موقوف</span>';
+          const editBtn = isAdmin
+            ? '<button type="button" class="btn-link link-edit" data-edit-id="' + u.id + '"><i data-lucide="pencil"></i> تعديل</button>'
+            : '';
+          return '<tr>' +
+            '<td>' + escapeHtml(u.full_name) + '</td>' +
+            '<td class="cell-mono">' + escapeHtml(u.username) + '</td>' +
+            '<td><span class="badge badge-info">' + roleLabels[u.role] + '</span></td>' +
+            '<td>' + escapeHtml(u.department_name || '-') + '</td>' +
+            '<td>' + statusBadge + '</td>' +
+            '<td>' + editBtn + '</td>' +
+            '</tr>';
+        }).join('');
+      }
+
+      showStatus('تم التحميل بنجاح (' + body.data.length + ' مستخدم)', 'ok');
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
+    }
+  }
+
+  tableBody.addEventListener('click', function (e) {
+    const target = e.target.closest('[data-edit-id]');
+    if (!target) return;
+    const u = usersCache[target.getAttribute('data-edit-id')];
+    if (u) enterEditMode(u);
+  });
+
+  formEl.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    saveBtn.disabled = true;
+    showStatus(editingId ? 'جاري حفظ التعديلات...' : 'جاري الإضافة...', '');
+
+    const basePayload = {
+      full_name: document.getElementById('fullName').value.trim(),
+      role: document.getElementById('role').value,
+      department_id: document.getElementById('departmentId').value,
+    };
+
+    const password = passwordInput.value;
+    if (password) basePayload.password = password;
+
+    let url, method, payload;
+
+    if (editingId) {
+      url = '/api/users/' + editingId;
+      method = 'PUT';
+      payload = Object.assign({}, basePayload, { is_active: isActiveCheckbox.checked });
+    } else {
+      url = '/api/users';
+      method = 'POST';
+      payload = Object.assign({}, basePayload, { username: document.getElementById('username').value.trim() });
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: method,
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+
+      if (!body.success) {
+        showStatus('خطأ: ' + body.error, 'error');
+        return;
+      }
+
+      const wasEditing = !!editingId;
+      exitEditMode();
+      showStatus(wasEditing ? 'تم حفظ التعديلات بنجاح ✅' : 'تم إضافة المستخدم بنجاح ✅', 'ok');
+      loadUsers();
+    } catch (err) {
+      showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  loadDepartments();
+  loadUsers();
+  if (window.lucide) lucide.createIcons();
+</script>
+
+</body>
+</html>
