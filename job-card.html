@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="assets/upload.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 <style>
   .summary {
@@ -38,6 +39,64 @@
     align-items: center;
   }
   .total-box strong { font-size: 20px; font-family: var(--font-mono); color: var(--color-amber-dark); }
+
+  .photo-stage { margin-bottom: 20px; }
+  .photo-stage:last-child { margin-bottom: 0; }
+  .photo-stage h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-ink-muted);
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .photo-stage h3 svg { width: 14px; height: 14px; }
+  .photo-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .photo-thumb {
+    position: relative;
+    width: 84px;
+    height: 84px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+  }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-thumb .photo-delete {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    background: rgba(193,18,31,0.9);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .photo-thumb .photo-delete svg { width: 11px; height: 11px; }
+  .photo-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--color-info);
+    cursor: pointer;
+    background: var(--color-info-bg);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  .photo-upload-btn input { display: none; }
+  .photo-upload-btn svg { width: 13px; height: 13px; }
 </style>
 </head>
 <body>
@@ -54,7 +113,14 @@
     <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
     <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
     <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+    <a href="notifications.html" class="nav-pill"><i data-lucide="bell"></i> التنبيهات<span class="notif-badge" id="notifBadge">0</span></a>
   </nav>
+
+  <div class="global-search">
+    <i data-lucide="search"></i>
+    <input type="text" id="globalSearchInput" placeholder="بحث بالكود، رقم الزيارة، الاسم...">
+    <div id="globalSearchResults" class="search-results"></div>
+  </div>
 </header>
 
 <main class="page page-narrow">
@@ -153,6 +219,13 @@
         <span>إجمالي التكلفة (قطع غيار + عمالة)</span>
         <strong id="totalCost">0</strong>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>صور الإصلاح</h2>
+      <p style="margin:-8px 0 14px; font-size:12.5px; color:var(--color-ink-muted);">صوّر حالة المعدة في كل مرحلة — قبل الإصلاح، أثناءه، وبعد ما يخلص</p>
+
+      <div id="photoStages"></div>
     </div>
   </div>
 </main>
@@ -260,6 +333,110 @@
     if (window.lucide) lucide.createIcons();
   }
 
+  // ---- Repair photos (before / during / after) ----
+  let workshopEntryId = null;
+  const photoStagesEl = document.getElementById('photoStages');
+  const STAGES = [
+    { key: 'before_repair', label: 'قبل الإصلاح', icon: 'camera' },
+    { key: 'during_repair', label: 'أثناء الإصلاح', icon: 'wrench' },
+    { key: 'after_repair', label: 'بعد الإصلاح', icon: 'check-circle' },
+  ];
+
+  function renderPhotoStages(allPhotos) {
+    photoStagesEl.innerHTML = STAGES.map(function (stage) {
+      const stagePhotos = allPhotos.filter(function (p) { return p.stage === stage.key; });
+      const gallery = stagePhotos.map(function (p) {
+        return '<div class="photo-thumb">' +
+          '<img src="' + p.photo_url + '">' +
+          '<button type="button" class="photo-delete" data-photo-id="' + p.id + '"><i data-lucide="x"></i></button>' +
+          '</div>';
+      }).join('');
+
+      return '<div class="photo-stage">' +
+        '<h3><i data-lucide="' + stage.icon + '"></i> ' + stage.label + ' (' + stagePhotos.length + ')</h3>' +
+        '<div class="photo-gallery">' + gallery + '</div>' +
+        '<label class="photo-upload-btn">' +
+          '<i data-lucide="upload"></i> إضافة صورة' +
+          '<input type="file" accept="image/*" data-stage="' + stage.key + '">' +
+        '</label>' +
+        '</div>';
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  async function loadPhotos() {
+    if (!workshopEntryId) return;
+    try {
+      const res = await fetch('/api/workshop-entries/' + workshopEntryId + '/photos', { headers: authHeaders() });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+      if (!body.success) return;
+      renderPhotoStages(body.data);
+    } catch (err) {
+      showStatus('تعذر تحميل الصور: ' + err.message, 'error');
+    }
+  }
+
+  photoStagesEl.addEventListener('change', async function (e) {
+    const input = e.target.closest('input[type="file"][data-stage]');
+    if (!input) return;
+    const file = input.files[0];
+    if (!file) return;
+    const stage = input.getAttribute('data-stage');
+
+    showStatus('جاري رفع الصورة...', '');
+    try {
+      const photoUrl = await uploadImageToCloudinary(file);
+
+      const res = await fetch('/api/workshop-entries/' + workshopEntryId + '/photos', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ photo_url: photoUrl, stage: stage }),
+      });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+
+      if (!body.success) {
+        showStatus('خطأ: ' + body.error, 'error');
+        return;
+      }
+
+      showStatus('تمت إضافة الصورة ✅', 'ok');
+      loadPhotos();
+    } catch (err) {
+      showStatus('خطأ: ' + err.message, 'error');
+    }
+  });
+
+  photoStagesEl.addEventListener('click', async function (e) {
+    const btn = e.target.closest('[data-photo-id]');
+    if (!btn) return;
+    const photoId = btn.getAttribute('data-photo-id');
+
+    const confirmed = window.confirm('حذف الصورة دي؟');
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch('/api/workshop-entries/' + workshopEntryId + '/photos/' + photoId, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+
+      if (!body.success) {
+        showStatus('خطأ: ' + body.error, 'error');
+        return;
+      }
+
+      showStatus('تم حذف الصورة ✅', 'ok');
+      loadPhotos();
+    } catch (err) {
+      showStatus('خطأ: ' + err.message, 'error');
+    }
+  });
+
   async function loadJobCard() {
     if (!jobCardId) {
       loadingBox.textContent = 'رقم بطاقة الشغل غير موجود في الرابط';
@@ -296,6 +473,9 @@
 
       await loadTechnicians(jc.assigned_technician_id);
       renderParts(jc.parts || []);
+
+      workshopEntryId = jc.workshop_entry_id;
+      loadPhotos();
 
       loadingBox.style.display = 'none';
       contentBox.style.display = 'block';
@@ -413,5 +593,7 @@
   if (window.lucide) lucide.createIcons();
 </script>
 
+<script src="assets/search.js"></script>
+<script src="assets/notifications.js"></script>
 </body>
 </html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeavyCare — التنبيهات</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .alert-section { margin-bottom: 24px; }
+  .alert-section h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+  }
+  .alert-section h2 .count-pill {
+    background: var(--color-bg);
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 2px 9px;
+    border-radius: 999px;
+  }
+  .alert-list { list-style: none; margin: 0; padding: 0; }
+  .alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: var(--color-ink);
+  }
+  .alert-item:hover { background: #EAE7DC; }
+  .alert-item .alert-main { display: flex; flex-direction: column; gap: 2px; }
+  .alert-item .alert-title { font-weight: 600; font-size: 13.5px; }
+  .alert-item .alert-sub { font-size: 12px; color: var(--color-ink-muted); }
+  .alert-item .alert-arrow { color: var(--color-ink-muted); }
+  .alert-item.accent-amber { border-right: 3px solid var(--color-amber); }
+  .alert-item.accent-info { border-right: 3px solid var(--color-info); }
+  .alert-item.accent-danger { border-right: 3px solid var(--color-danger); }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
+  </div>
+  <nav class="nav-pills">
+    <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+    <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
+    <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+    <a href="notifications.html" class="nav-pill active"><i data-lucide="bell"></i> التنبيهات<span class="notif-badge" id="notifBadge">0</span></a>
+  </nav>
+  <div class="session">
+    <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
+    <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
+  </div>
+</header>
+
+<main class="page page-narrow">
+
+  <div class="nameplate">
+    <div class="eyebrow">ACTION REQUIRED · NOTIFICATIONS</div>
+    <h1>التنبيهات</h1>
+    <p>كل حاجة محتاجة تصرّف منك دلوقتي، في مكان واحد</p>
+  </div>
+
+  <div id="loadingBox" style="text-align:center; color:var(--color-ink-muted); padding:40px 0;">جاري التحميل...</div>
+
+  <div id="content" style="display:none;">
+    <div class="alert-section">
+      <h2><i data-lucide="check-circle" style="color:var(--color-info);"></i> محتاجة إقفال / موافقة <span class="count-pill" id="countApproval">0</span></h2>
+      <ul class="alert-list" id="listApproval"></ul>
+    </div>
+
+    <div class="alert-section">
+      <h2><i data-lucide="package" style="color:var(--color-amber-dark);"></i> محتاجة قطع غيار <span class="count-pill" id="countParts">0</span></h2>
+      <ul class="alert-list" id="listParts"></ul>
+    </div>
+
+    <div class="alert-section">
+      <h2><i data-lucide="alert-triangle" style="color:var(--color-danger);"></i> متأخرة <span class="count-pill" id="countDelayed">0</span></h2>
+      <ul class="alert-list" id="listDelayed"></ul>
+    </div>
+  </div>
+
+</main>
+
+<script src="assets/search.js"></script>
+<script>
+  // ---- Auth guard ----
+  const authToken = localStorage.getItem('auth_token');
+  const authUserRaw = localStorage.getItem('auth_user');
+
+  if (!authToken || !authUserRaw) {
+    window.location.href = 'login.html';
+    throw new Error('Not authenticated');
+  }
+
+  const authUser = JSON.parse(authUserRaw);
+  document.getElementById('userName').textContent = authUser.full_name;
+  document.getElementById('userRole').textContent = authUser.role;
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = 'login.html';
+  });
+
+  function authHeaders(extra) {
+    return Object.assign({ Authorization: 'Bearer ' + authToken }, extra || {});
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  function renderList(elId, countElId, items, accentClass, subBuilder) {
+    document.getElementById(countElId).textContent = items.length;
+    const listEl = document.getElementById(elId);
+
+    if (items.length === 0) {
+      listEl.innerHTML = '<li class="empty-row">لا يوجد حاليًا ✅</li>';
+      return;
+    }
+
+    listEl.innerHTML = items.map(function (item) {
+      return '<a class="alert-item ' + accentClass + '" href="job-card.html?id=' + item.job_card_id + '">' +
+        '<span class="alert-main">' +
+          '<span class="alert-title">' + escapeHtml(item.entry_number) + ' — ' + escapeHtml(item.equipment_code) + '</span>' +
+          '<span class="alert-sub">' + escapeHtml(item.department_name) + ' · ' + subBuilder(item) + '</span>' +
+        '</span>' +
+        '<i class="alert-arrow" data-lucide="chevron-left"></i>' +
+        '</a>';
+    }).join('');
+  }
+
+  async function loadNotifications() {
+    try {
+      const res = await fetch('/api/notifications', { headers: authHeaders() });
+      if (res.status === 401) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = 'login.html';
+        return;
+      }
+      const body = await res.json();
+
+      if (!body.success) {
+        document.getElementById('loadingBox').textContent = 'خطأ: ' + body.error;
+        return;
+      }
+
+      const data = body.data;
+
+      renderList('listApproval', 'countApproval', data.waiting_approval, 'accent-info', function (item) {
+        return 'دخلت في ' + item.entry_date;
+      });
+      renderList('listParts', 'countParts', data.waiting_parts, 'accent-amber', function (item) {
+        return 'دخلت في ' + item.entry_date;
+      });
+      renderList('listDelayed', 'countDelayed', data.delayed, 'accent-danger', function (item) {
+        return (item.maintenance_type === 'PM' ? 'صيانة دورية' : 'عطل') + ' — دخلت في ' + item.entry_date;
+      });
+
+      document.getElementById('loadingBox').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      document.getElementById('loadingBox').textContent = 'تعذر الاتصال بالخادم: ' + err.message;
+    }
+  }
+
+  loadNotifications();
+  if (window.lucide) lucide.createIcons();
+</script>
+
+<script src="assets/notifications.js"></script>
+</body>
+</html>

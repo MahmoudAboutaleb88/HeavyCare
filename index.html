@@ -25,7 +25,15 @@
     <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
       <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
     <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+    <a href="notifications.html" class="nav-pill"><i data-lucide="bell"></i> التنبيهات<span class="notif-badge" id="notifBadge">0</span></a>
   </nav>
+
+  <div class="global-search">
+    <i data-lucide="search"></i>
+    <input type="text" id="globalSearchInput" placeholder="بحث بالكود، رقم الزيارة، الاسم...">
+    <div id="globalSearchResults" class="search-results"></div>
+  </div>
+
   <div class="session">
     <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
     <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
@@ -285,5 +293,7 @@
   if (window.lucide) lucide.createIcons();
 </script>
 
+<script src="assets/search.js"></script>
+<script src="assets/notifications.js"></script>
 </body>
 </html>

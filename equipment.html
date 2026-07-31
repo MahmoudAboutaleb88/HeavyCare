@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="assets/upload.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -25,7 +26,15 @@
     <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
       <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
     <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+    <a href="notifications.html" class="nav-pill"><i data-lucide="bell"></i> التنبيهات<span class="notif-badge" id="notifBadge">0</span></a>
   </nav>
+
+  <div class="global-search">
+    <i data-lucide="search"></i>
+    <input type="text" id="globalSearchInput" placeholder="بحث بالكود، رقم الزيارة، الاسم...">
+    <div id="globalSearchResults" class="search-results"></div>
+  </div>
+
   <div class="session">
     <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
     <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
@@ -43,6 +52,17 @@
   <div class="card">
     <form id="addForm">
       <div class="form-grid">
+        <div class="field-full" style="display:flex; align-items:center; gap:16px;">
+          <div id="imagePreviewBox" style="width:72px; height:72px; border-radius:10px; background:var(--color-bg); border:1px dashed var(--color-border-strong); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+            <i data-lucide="image" style="color:var(--color-ink-muted);"></i>
+          </div>
+          <div style="flex:1;">
+            <label>صورة المعدة</label>
+            <input type="file" id="imageInput" accept="image/*">
+            <div class="role-select-hint" id="imageHint" style="font-size:11.5px; color:var(--color-ink-muted); margin-top:4px;"></div>
+          </div>
+        </div>
+
         <div class="field-full" style="display:grid; grid-template-columns:1fr 1fr; gap:14px 18px;">
           <div>
             <label>كود المعدة <span class="req">*</span></label>
@@ -107,6 +127,7 @@
     <table class="data-table">
       <thead>
         <tr>
+          <th></th>
           <th>الكود</th>
           <th>النوع</th>
           <th>الإدارة</th>
@@ -163,8 +184,35 @@
   const addBtn = document.getElementById('addBtn');
   const cancelEditBtn = document.getElementById('cancelEditBtn');
   const formTitle = document.getElementById('formTitle');
+  const imageInput = document.getElementById('imageInput');
+  const imagePreviewBox = document.getElementById('imagePreviewBox');
+  const imageHint = document.getElementById('imageHint');
 
   let editingId = null;
+  let currentImageUrl = null;
+
+  function setImagePreview(url) {
+    currentImageUrl = url;
+    imagePreviewBox.innerHTML = url
+      ? '<img src="' + url + '" style="width:100%; height:100%; object-fit:cover;">'
+      : '<i data-lucide="image" style="color:var(--color-ink-muted);"></i>';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  imageInput.addEventListener('change', async function () {
+    const file = imageInput.files[0];
+    if (!file) return;
+
+    imageHint.textContent = 'جاري رفع الصورة...';
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setImagePreview(url);
+      imageHint.textContent = 'تم رفع الصورة بنجاح ✅';
+    } catch (err) {
+      imageHint.textContent = 'خطأ: ' + err.message;
+      imageInput.value = '';
+    }
+  });
 
   function enterEditMode(eq) {
     editingId = eq.id;
@@ -182,6 +230,8 @@
     document.getElementById('hourMeter').value = eq.hour_meter || 0;
     document.getElementById('purchaseDate').value = eq.purchase_date || '';
     document.getElementById('warrantyExpiry').value = eq.warranty_expiry || '';
+    setImagePreview(eq.image_url || null);
+    imageHint.textContent = '';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (window.lucide) lucide.createIcons();
@@ -194,10 +244,14 @@
     cancelEditBtn.style.display = 'none';
     formEl.reset();
     document.getElementById('hourMeter').value = '0';
+    setImagePreview(null);
+    imageHint.textContent = '';
     if (window.lucide) lucide.createIcons();
   }
 
   cancelEditBtn.addEventListener('click', exitEditMode);
+
+
 
   const statusLabels = {
     available: 'متاحة',
@@ -268,7 +322,11 @@
 
         tableBody.innerHTML = body.data.map(function (eq) {
           const brandModel = [eq.brand, eq.model].filter(Boolean).join(' / ') || '-';
+          const thumb = eq.image_url
+            ? '<img src="' + eq.image_url + '" style="width:36px; height:36px; border-radius:6px; object-fit:cover;">'
+            : '<div style="width:36px; height:36px; border-radius:6px; background:var(--color-bg);"></div>';
           return '<tr>' +
+            '<td>' + thumb + '</td>' +
             '<td class="cell-mono">' + escapeHtml(eq.code) + '</td>' +
             '<td>' + escapeHtml(eq.equipment_type || '-') + '</td>' +
             '<td>' + escapeHtml(eq.department_name) + '</td>' +
@@ -345,6 +403,7 @@
       hour_meter: document.getElementById('hourMeter').value,
       purchase_date: document.getElementById('purchaseDate').value,
       warranty_expiry: document.getElementById('warrantyExpiry').value,
+      image_url: currentImageUrl,
     };
 
     const url = editingId ? '/api/equipment/' + editingId : '/api/equipment';
@@ -380,5 +439,7 @@
   if (window.lucide) lucide.createIcons();
 </script>
 
+<script src="assets/search.js"></script>
+<script src="assets/notifications.js"></script>
 </body>
 </html>
