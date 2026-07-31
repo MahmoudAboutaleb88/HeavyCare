@@ -416,15 +416,16 @@ async function equipmentItem(req, res, params) {
       const purchaseDate = optionalString(body.purchase_date);
       const warrantyExpiry = optionalString(body.warranty_expiry);
       const hourMeter = body.hour_meter !== undefined && body.hour_meter !== '' ? Number(body.hour_meter) : 0;
+      const imageUrl = optionalString(body.image_url);
 
       await query(
         `UPDATE equipment SET
            code = ?, name = ?, department_id = ?, equipment_type = ?,
            brand = ?, model = ?, asset_number = ?, manufacturing_year = ?,
-           purchase_date = ?, warranty_expiry = ?, hour_meter = ?
+           purchase_date = ?, warranty_expiry = ?, hour_meter = ?, image_url = ?
          WHERE id = ?`,
         [code, name, departmentId, equipmentType, brand, model, assetNumber,
-         manufacturingYear, purchaseDate, warrantyExpiry, hourMeter, id]
+         manufacturingYear, purchaseDate, warrantyExpiry, hourMeter, imageUrl, id]
       );
 
       const [updated] = await query(
@@ -1050,6 +1051,233 @@ async function jobCardPartItem(req, res, params) {
 }
 
 // ============================================================================
+// NOTIFICATIONS handler
+// ============================================================================
+// No notifications table, no background jobs, no email/SMS — every alert
+// here is computed live from current data each time this endpoint is
+// called. That's the right level of complexity for this system's scale:
+// a small in-house workshop tool checked by a handful of people, not a
+// platform that needs push delivery or a queue.
+
+const DELAYED_PM_HOURS = 24;
+const DELAYED_BD_DAYS = 3;
+
+async function notificationsSummary(req, res) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+  if (req.method !== 'GET') return sendError(res, 405, 'Method not allowed');
+
+  try {
+    const baseSelect = `
+      SELECT we.id, we.entry_number, we.maintenance_type, we.entry_date, we.entry_time,
+             e.code AS equipment_code, d.name AS department_name,
+             jc.id AS job_card_id, jc.progress_status
+      FROM workshop_entries we
+      JOIN equipment e ON e.id = we.equipment_id
+      JOIN departments d ON d.id = we.department_id
+      JOIN job_cards jc ON jc.workshop_entry_id = we.id
+      WHERE we.status = 'open'`;
+
+    const waitingApproval = await query(
+      baseSelect + ` AND jc.progress_status IN ('completed', 'delivered') ORDER BY we.entry_date ASC`
+    );
+
+    const waitingParts = await query(
+      baseSelect + ` AND jc.progress_status = 'waiting_spare_parts' ORDER BY we.entry_date ASC`
+    );
+
+    const delayed = await query(
+      baseSelect + `
+        AND (
+          (we.maintenance_type = 'PM' AND TIMESTAMPDIFF(HOUR, CONCAT(we.entry_date, ' ', we.entry_time), NOW()) > ?)
+          OR
+          (we.maintenance_type = 'BD' AND TIMESTAMPDIFF(DAY, we.entry_date, CURDATE()) > ?)
+        )
+        ORDER BY we.entry_date ASC`,
+      [DELAYED_PM_HOURS, DELAYED_BD_DAYS]
+    );
+
+    return sendSuccess(res, 200, {
+      waiting_approval: waitingApproval,
+      waiting_parts: waitingParts,
+      delayed,
+      total: waitingApproval.length + waitingParts.length + delayed.length,
+    });
+  } catch (err) {
+    console.error('GET /api/notifications failed:', err);
+    return sendError(res, 500, 'Failed to load notifications');
+  }
+}
+
+// ============================================================================
+// CONFIG handler — public, non-secret frontend settings
+// ============================================================================
+// Cloud name + unsigned upload preset are meant to be visible in the
+// browser (that's how Cloudinary's unsigned upload flow works — there's
+// no secret involved). We still serve them from an env-var-backed
+// endpoint instead of hardcoding them in every HTML file, so changing
+// them later is a one-line env var edit, not a find-and-replace across
+// a dozen pages.
+
+async function publicConfig(req, res) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+  if (req.method !== 'GET') return sendError(res, 405, 'Method not allowed');
+
+  return sendSuccess(res, 200, {
+    cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME || null,
+    cloudinary_upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || null,
+  });
+}
+
+// ============================================================================
+// WORKSHOP ENTRY PHOTOS handlers
+// ============================================================================
+// Photos are tagged by stage (entry / before_repair / during_repair /
+// after_repair) per the original spec. The actual image bytes live on
+// Cloudinary — we only ever store the resulting secure_url here.
+
+const CAN_MANAGE_PHOTOS = ['admin', 'workshop_manager', 'supervisor', 'technician'];
+
+async function entryPhotosCollection(req, res, params) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+
+  const entryId = Number(params.id);
+  if (!entryId) return sendError(res, 400, 'Invalid workshop entry id');
+
+  if (req.method === 'GET') {
+    try {
+      const rows = await query(
+        `SELECT id, photo_url, stage, uploaded_at
+         FROM workshop_entry_photos WHERE workshop_entry_id = ? ORDER BY uploaded_at ASC`,
+        [entryId]
+      );
+      return sendSuccess(res, 200, rows);
+    } catch (err) {
+      console.error('GET photos failed:', err);
+      return sendError(res, 500, 'Failed to load photos');
+    }
+  }
+
+  if (req.method === 'POST') {
+    if (!CAN_MANAGE_PHOTOS.includes(user.role)) {
+      return sendError(res, 403, 'You do not have permission to add photos');
+    }
+    try {
+      const entryRows = await query('SELECT id FROM workshop_entries WHERE id = ?', [entryId]);
+      if (entryRows.length === 0) return sendError(res, 404, 'Workshop entry not found');
+
+      const body = req.body || {};
+      const photoUrl = String(body.photo_url || '').trim();
+      const stage = body.stage;
+      const validStages = ['entry', 'before_repair', 'during_repair', 'after_repair'];
+
+      if (!photoUrl) return sendError(res, 400, 'photo_url is required');
+      if (!validStages.includes(stage)) return sendError(res, 400, 'Invalid stage');
+
+      const result = await query(
+        `INSERT INTO workshop_entry_photos (workshop_entry_id, photo_url, stage) VALUES (?, ?, ?)`,
+        [entryId, photoUrl, stage]
+      );
+      const [created] = await query(
+        `SELECT id, photo_url, stage, uploaded_at FROM workshop_entry_photos WHERE id = ?`,
+        [result.insertId]
+      );
+      return sendSuccess(res, 201, created);
+    } catch (err) {
+      console.error('POST photos failed:', err);
+      return sendError(res, 500, 'Failed to save photo');
+    }
+  }
+
+  return sendError(res, 405, 'Method not allowed');
+}
+
+async function entryPhotoItem(req, res, params) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+  if (req.method !== 'DELETE') return sendError(res, 405, 'Method not allowed');
+  if (!CAN_MANAGE_PHOTOS.includes(user.role)) {
+    return sendError(res, 403, 'You do not have permission to delete photos');
+  }
+
+  const entryId = Number(params.id);
+  const photoId = Number(params.photoId);
+  if (!entryId || !photoId) return sendError(res, 400, 'Invalid ids');
+
+  try {
+    const rows = await query(
+      'SELECT id FROM workshop_entry_photos WHERE id = ? AND workshop_entry_id = ?',
+      [photoId, entryId]
+    );
+    if (rows.length === 0) return sendError(res, 404, 'Photo not found');
+
+    await query('DELETE FROM workshop_entry_photos WHERE id = ?', [photoId]);
+    return sendSuccess(res, 200, { id: photoId, deleted: true });
+  } catch (err) {
+    console.error('DELETE photo failed:', err);
+    return sendError(res, 500, 'Failed to delete photo');
+  }
+}
+
+// ============================================================================
+// SEARCH handler
+// ============================================================================
+// One global search box, three sources. Kept intentionally simple (LIKE
+// matching, small per-category limits) since this is an internal tool
+// with a modest amount of data — a full-text search engine would be
+// over-engineering at this scale.
+
+async function globalSearch(req, res) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+  if (req.method !== 'GET') return sendError(res, 405, 'Method not allowed');
+
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) {
+    return sendSuccess(res, 200, { equipment: [], workshop_entries: [], users: [] });
+  }
+
+  try {
+    const pattern = '%' + q.replace(/[%_]/g, '\\$&') + '%';
+
+    const equipment = await query(
+      `SELECT e.id, e.code, e.equipment_type, e.brand, e.model, d.name AS department_name
+       FROM equipment e JOIN departments d ON d.id = e.department_id
+       WHERE e.is_archived = FALSE
+         AND (e.code LIKE ? OR e.equipment_type LIKE ? OR e.brand LIKE ? OR e.model LIKE ?)
+       LIMIT 6`,
+      [pattern, pattern, pattern, pattern]
+    );
+
+    const workshopEntries = await query(
+      `SELECT we.id, we.entry_number, we.status, we.reported_problem, e.code AS equipment_code
+       FROM workshop_entries we JOIN equipment e ON e.id = we.equipment_id
+       WHERE we.entry_number LIKE ? OR we.reported_problem LIKE ? OR e.code LIKE ?
+       ORDER BY we.created_at DESC LIMIT 6`,
+      [pattern, pattern, pattern]
+    );
+
+    const users = await query(
+      `SELECT id, full_name, username, role FROM users
+       WHERE is_active = TRUE AND (full_name LIKE ? OR username LIKE ?)
+       LIMIT 6`,
+      [pattern, pattern]
+    );
+
+    return sendSuccess(res, 200, {
+      equipment,
+      workshop_entries: workshopEntries,
+      users,
+    });
+  } catch (err) {
+    console.error('GET /api/search failed:', err);
+    return sendError(res, 500, 'Search failed');
+  }
+}
+
+// ============================================================================
 // REPORTS handler
 // ============================================================================
 // One flexible endpoint covers every report type from the spec (equipment
@@ -1202,6 +1430,15 @@ async function dashboardStats(req, res) {
 // that needs to change to wire up a new route.
 
 const routes = [
+  { pattern: ['notifications'], methods: { GET: notificationsSummary } },
+
+  { pattern: ['config'], methods: { GET: publicConfig } },
+
+  { pattern: ['workshop-entries', ':id', 'photos'], methods: { GET: entryPhotosCollection, POST: entryPhotosCollection } },
+  { pattern: ['workshop-entries', ':id', 'photos', ':photoId'], methods: { DELETE: entryPhotoItem } },
+
+  { pattern: ['search'], methods: { GET: globalSearch } },
+
   { pattern: ['reports', 'workshop-entries'], methods: { GET: reportsWorkshopEntries } },
 
   { pattern: ['dashboard'], methods: { GET: dashboardStats } },
