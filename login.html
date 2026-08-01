@@ -3,93 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تسجيل الدخول</title>
+<title>HeavyCare — تسجيل الدخول</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
 <style>
-  * { box-sizing: border-box; }
   body {
-    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-    background: #f4f6f8;
-    margin: 0;
-    padding: 40px 20px;
-    color: #1f2937;
+    background: linear-gradient(160deg, var(--color-steel) 0%, #1B222C 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
   }
-  .container {
-    max-width: 380px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    padding: 28px;
+  .login-shell { width: 100%; max-width: 380px; }
+  .login-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 20px;
+    margin-bottom: 24px;
   }
-  h1 { font-size: 20px; margin: 0 0 20px; }
-  label { display: block; font-size: 13px; margin: 14px 0 4px; color: #374151; }
-  input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
+  .login-brand .brand-mark {
+    width: 38px; height: 38px; border-radius: 9px;
+    background: var(--color-amber); color: var(--color-steel);
+    display: flex; align-items: center; justify-content: center;
   }
-  button {
-    width: 100%;
-    margin-top: 20px;
-    background: #2563eb;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
+  .login-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border-top: 4px solid var(--color-amber);
   }
-  button:hover { background: #1d4ed8; }
-  button:disabled { background: #93a3ba; cursor: not-allowed; }
-  .status { font-size: 13px; margin-top: 16px; min-height: 18px; white-space: pre-wrap; }
-  .status.error { color: #dc2626; }
-  .status.ok { color: #16a34a; }
-  .user-box {
-    margin-top: 16px;
-    padding: 14px;
-    background: #f0fdf4;
-    border-radius: 8px;
-    font-size: 13px;
-    display: none;
-  }
+  .login-card h1 { font-size: 18px; margin: 0 0 4px; }
+  .login-card p.sub { color: var(--color-ink-muted); font-size: 13px; margin: 0 0 22px; }
+  .login-card .btn { width: 100%; margin-top: 18px; justify-content: center; }
+  .login-card label { margin-top: 14px; }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>تسجيل الدخول</h1>
+<div class="login-shell">
+  <div class="login-brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
+  </div>
 
-  <form id="loginForm">
-    <label>اسم المستخدم</label>
-    <input type="text" id="username" required>
+  <div class="login-card">
+    <h1>تسجيل الدخول</h1>
+    <p class="sub">نظام إدارة ورشة المعدات</p>
 
-    <label>كلمة السر</label>
-    <input type="password" id="password" required>
+    <form id="loginForm">
+      <label>اسم المستخدم</label>
+      <input type="text" id="username" required>
 
-    <button type="submit" id="loginBtn">دخول</button>
-  </form>
+      <label>كلمة السر</label>
+      <input type="password" id="password" required>
 
-  <div id="status" class="status"></div>
-  <div id="userBox" class="user-box"></div>
+      <button type="submit" id="loginBtn" class="btn btn-primary"><i data-lucide="log-in"></i> دخول</button>
+    </form>
+
+    <div id="status" class="status-msg"></div>
+  </div>
 </div>
 
 <script>
   const formEl = document.getElementById('loginForm');
   const statusEl = document.getElementById('status');
   const loginBtn = document.getElementById('loginBtn');
-  const userBox = document.getElementById('userBox');
 
   function showStatus(message, type) {
     statusEl.textContent = message;
-    statusEl.className = 'status ' + (type || '');
+    statusEl.className = 'status-msg ' + (type === 'error' ? 'is-error' : type === 'ok' ? 'is-ok' : '');
   }
 
   formEl.addEventListener('submit', async function (e) {
     e.preventDefault();
     loginBtn.disabled = true;
-    userBox.style.display = 'none';
     showStatus('جاري تسجيل الدخول...', '');
 
     try {
@@ -108,15 +105,13 @@
         return;
       }
 
-      // Store the token and the user's basic info so other pages
-      // (like index.html) know who's logged in without another request.
       localStorage.setItem('auth_token', body.data.token);
       localStorage.setItem('auth_user', JSON.stringify(body.data.user));
 
       showStatus('تم تسجيل الدخول بنجاح ✅ جاري التحويل...', 'ok');
 
       setTimeout(function () {
-        window.location.href = 'index.html';
+        window.location.href = 'equipment-cards.html';
       }, 600);
     } catch (err) {
       showStatus('تعذر الاتصال بالخادم: ' + err.message, 'error');
@@ -124,6 +119,8 @@
       loginBtn.disabled = false;
     }
   });
+
+  if (window.lucide) lucide.createIcons();
 </script>
 
 </body>
