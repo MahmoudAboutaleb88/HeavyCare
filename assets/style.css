@@ -72,6 +72,9 @@ body {
   align-items: center;
   justify-content: space-between;
   height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 60;
 }
 
 .app-header .brand {
@@ -469,8 +472,62 @@ table.data-table {
 
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }
-  .app-header { padding: 0 14px; flex-wrap: wrap; height: auto; padding-block: 10px; }
+}
+
+/* ============================================================================
+   RESPONSIVE NAVIGATION
+   Desktop (>= 900px): the nav becomes a fixed vertical sidebar.
+   Mobile  (<  900px): the nav stays a horizontal scrollable button row
+   right under the header, like a toolbar.
+   ============================================================================ */
+
+/* ---- Mobile: horizontal scrollable nav row ---- */
+@media (max-width: 899px) {
+  .app-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 14px;
+    row-gap: 8px;
+  }
+  .nav-pills {
+    order: 3;
+    flex-basis: 100%;
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .nav-pills::-webkit-scrollbar { height: 4px; }
+  .nav-pills::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 999px; }
   .page { padding: 20px 14px 40px; }
+}
+
+/* ---- Desktop: fixed vertical sidebar ---- */
+@media (min-width: 900px) {
+  .nav-pills {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    width: 208px;
+    background: var(--color-steel);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 16px 10px;
+    overflow-y: auto;
+    z-index: 50;
+    border-inline-start: 1px solid rgba(255,255,255,0.06);
+  }
+  .nav-pill {
+    justify-content: flex-start;
+    width: 100%;
+    padding: 10px 14px;
+  }
+  .notif-badge { left: auto; right: 10px; }
+  body:has(.nav-pills) { padding-right: 208px; }
 }
 
 /* ============================================================================
