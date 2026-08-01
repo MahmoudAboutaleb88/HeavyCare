@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="assets/pagination.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 <style>
   .filters-grid {
@@ -58,9 +59,10 @@
     HeavyCare
   </div>
   <nav class="nav-pills">
+    <a href="equipment-cards.html" class="nav-pill"><i data-lucide="home"></i> الرئيسية</a>
     <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
     <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
-    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> إدارة المعدات</a>
     <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
     <a href="reports.html" class="nav-pill active"><i data-lucide="file-text"></i> التقارير</a>
     <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
@@ -153,6 +155,7 @@
         </thead>
         <tbody id="reportBody"></tbody>
       </table>
+      <div id="reportPager" class="no-print"></div>
     </div>
   </div>
 
@@ -263,10 +266,39 @@
     }
   }
 
+  let lastReportRows = [];
+
+  function buildReportRowHtml(r) {
+    const duration = r.maintenance_type === 'PM'
+      ? (r.duration_hours != null ? r.duration_hours + ' ساعة' : '-')
+      : (r.duration_days != null ? r.duration_days + ' يوم' : '-');
+    const cost = (Number(r.labor_cost || 0) + Number(r.parts_cost || 0)).toFixed(2);
+
+    return '<tr>' +
+      '<td class="cell-mono">' + escapeHtml(r.entry_number) + '</td>' +
+      '<td class="cell-mono">' + escapeHtml(r.equipment_code) + '</td>' +
+      '<td>' + escapeHtml(r.department_name) + '</td>' +
+      '<td><span class="badge ' + typeBadgeClass[r.maintenance_type] + '">' + typeLabels[r.maintenance_type] + '</span></td>' +
+      '<td class="cell-mono">' + r.entry_date + '</td>' +
+      '<td class="cell-mono">' + (r.exit_date || '-') + '</td>' +
+      '<td class="cell-mono">' + duration + '</td>' +
+      '<td><span class="badge ' + statusBadgeClass[r.status] + '">' + statusLabels[r.status] + '</span></td>' +
+      '<td class="cell-mono">' + cost + '</td>' +
+      '</tr>';
+  }
+
+  const reportPager = createPaginator(document.getElementById('reportPager'), 15, function (pageItems) {
+    reportBody.innerHTML = pageItems.length === 0
+      ? '<tr><td colspan="9" class="empty-row">لا يوجد سجلات مطابقة للفلاتر المختارة</td></tr>'
+      : pageItems.map(buildReportRowHtml).join('');
+    if (window.lucide) lucide.createIcons();
+  });
+
   function renderReport(rows) {
     reportArea.style.display = 'block';
+    lastReportRows = rows;
 
-    // ---- Summary strip ----
+    // ---- Summary strip (always reflects ALL filtered rows, not just the current page) ----
     const totalCount = rows.length;
     const pmCount = rows.filter(function (r) { return r.maintenance_type === 'PM'; }).length;
     const bdCount = rows.filter(function (r) { return r.maintenance_type === 'BD'; }).length;
@@ -280,29 +312,8 @@
       '<div class="mini-stat"><div class="num">' + closedWithDuration.length + '</div><div class="lbl">زيارات مقفولة</div></div>' +
       '<div class="mini-stat"><div class="num">' + totalCost.toFixed(0) + '</div><div class="lbl">إجمالي التكلفة</div></div>';
 
-    // ---- Table rows ----
-    if (rows.length === 0) {
-      reportBody.innerHTML = '<tr><td colspan="9" class="empty-row">لا يوجد سجلات مطابقة للفلاتر المختارة</td></tr>';
-    } else {
-      reportBody.innerHTML = rows.map(function (r) {
-        const duration = r.maintenance_type === 'PM'
-          ? (r.duration_hours != null ? r.duration_hours + ' ساعة' : '-')
-          : (r.duration_days != null ? r.duration_days + ' يوم' : '-');
-        const cost = (Number(r.labor_cost || 0) + Number(r.parts_cost || 0)).toFixed(2);
-
-        return '<tr>' +
-          '<td class="cell-mono">' + escapeHtml(r.entry_number) + '</td>' +
-          '<td class="cell-mono">' + escapeHtml(r.equipment_code) + '</td>' +
-          '<td>' + escapeHtml(r.department_name) + '</td>' +
-          '<td><span class="badge ' + typeBadgeClass[r.maintenance_type] + '">' + typeLabels[r.maintenance_type] + '</span></td>' +
-          '<td class="cell-mono">' + r.entry_date + '</td>' +
-          '<td class="cell-mono">' + (r.exit_date || '-') + '</td>' +
-          '<td class="cell-mono">' + duration + '</td>' +
-          '<td><span class="badge ' + statusBadgeClass[r.status] + '">' + statusLabels[r.status] + '</span></td>' +
-          '<td class="cell-mono">' + cost + '</td>' +
-          '</tr>';
-      }).join('');
-    }
+    // ---- Table rows (paginated on screen) ----
+    reportPager.setItems(rows);
 
     // ---- Print header meta (used only in the exported PDF) ----
     const filterBits = [];
@@ -314,6 +325,7 @@
     filterBits.push('تم الإنشاء: ' + new Date().toLocaleString('ar-EG'));
 
     document.getElementById('printMeta').textContent = filterBits.join(' · ');
+
 
     if (window.lucide) lucide.createIcons();
   }
@@ -335,6 +347,13 @@
     downloadBtn.disabled = true;
     downloadBtn.innerHTML = '<i data-lucide="loader"></i> جاري التجهيز...';
 
+    // The PDF must contain every filtered row, not just the page currently
+    // shown on screen — temporarily render the full set for the export,
+    // then restore the paginated view afterwards.
+    reportBody.innerHTML = lastReportRows.length === 0
+      ? '<tr><td colspan="9" class="empty-row">لا يوجد سجلات مطابقة للفلاتر المختارة</td></tr>'
+      : lastReportRows.map(buildReportRowHtml).join('');
+
     const filename = 'HeavyCare-Report-' + new Date().toISOString().slice(0, 10) + '.pdf';
 
     html2pdf()
@@ -348,6 +367,7 @@
       .from(reportArea)
       .save()
       .then(function () {
+        reportPager.refresh(); // back to the paginated on-screen view
         downloadBtn.disabled = false;
         downloadBtn.innerHTML = '<i data-lucide="download"></i> تحميل PDF';
         if (window.lucide) lucide.createIcons();

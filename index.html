@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="assets/pagination.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -19,9 +20,10 @@
     HeavyCare
   </div>
   <nav class="nav-pills">
+    <a href="equipment-cards.html" class="nav-pill"><i data-lucide="home"></i> الرئيسية</a>
     <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
     <a href="index.html" class="nav-pill active"><i data-lucide="layout-grid"></i> الأقسام</a>
-    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> إدارة المعدات</a>
     <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
       <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
     <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
@@ -68,6 +70,7 @@
       </thead>
       <tbody id="list"></tbody>
     </table>
+    <div id="deptPager" class="no-print"></div>
   </div>
 
 </main>
@@ -108,6 +111,31 @@
     statusEl.className = 'status-msg ' + (type === 'error' ? 'is-error' : type === 'ok' ? 'is-ok' : '');
   }
 
+  const deptPager = createPaginator(document.getElementById('deptPager'), 10, renderDeptRows);
+
+  function renderDeptRows(pageItems) {
+    listEl.innerHTML = '';
+
+    if (pageItems.length === 0) {
+      listEl.innerHTML = '<tr><td colspan="2" class="empty-row">لا يوجد أقسام مضافة بعد</td></tr>';
+      return;
+    }
+
+    pageItems.forEach(function (dept) {
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-dept-id', dept.id);
+      tr.innerHTML =
+        '<td class="dept-name-cell">' + escapeHtml(dept.name) + '</td>' +
+        '<td>' +
+          '<button type="button" class="btn-link link-edit" data-edit-id="' + dept.id + '"><i data-lucide="pencil"></i> تعديل</button> ' +
+          '<button type="button" class="btn-link link-danger" data-archive-id="' + dept.id + '" data-archive-name="' + escapeHtml(dept.name) + '"><i data-lucide="archive"></i> أرشفة</button>' +
+        '</td>';
+      listEl.appendChild(tr);
+    });
+
+    if (window.lucide) lucide.createIcons();
+  }
+
   async function loadDepartments() {
     showStatus('جاري التحميل...', '');
     try {
@@ -127,24 +155,8 @@
         return;
       }
 
-      listEl.innerHTML = '';
       deptCountEl.textContent = body.data.length;
-
-      if (body.data.length === 0) {
-        listEl.innerHTML = '<tr><td colspan="2" class="empty-row">لا يوجد أقسام مضافة بعد</td></tr>';
-      } else {
-        body.data.forEach(function (dept) {
-          const tr = document.createElement('tr');
-          tr.setAttribute('data-dept-id', dept.id);
-          tr.innerHTML =
-            '<td class="dept-name-cell">' + escapeHtml(dept.name) + '</td>' +
-            '<td>' +
-              '<button type="button" class="btn-link link-edit" data-edit-id="' + dept.id + '"><i data-lucide="pencil"></i> تعديل</button> ' +
-              '<button type="button" class="btn-link link-danger" data-archive-id="' + dept.id + '" data-archive-name="' + escapeHtml(dept.name) + '"><i data-lucide="archive"></i> أرشفة</button>' +
-            '</td>';
-          listEl.appendChild(tr);
-        });
-      }
+      deptPager.setItems(body.data);
 
       showStatus('تم التحميل بنجاح (' + body.data.length + ' قسم)', 'ok');
       if (window.lucide) lucide.createIcons();

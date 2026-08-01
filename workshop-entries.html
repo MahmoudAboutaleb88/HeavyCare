@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="assets/pagination.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 <style>
   .maintenance-toggle { display: flex; gap: 10px; }
@@ -36,9 +37,10 @@
     HeavyCare
   </div>
   <nav class="nav-pills">
+    <a href="equipment-cards.html" class="nav-pill"><i data-lucide="home"></i> الرئيسية</a>
     <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
     <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
-    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> إدارة المعدات</a>
     <a href="workshop-entries.html" class="nav-pill active"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
       <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
     <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
@@ -147,6 +149,7 @@
       </thead>
       <tbody id="tableBody"></tbody>
     </table>
+    <div id="entriesPager" class="no-print"></div>
   </div>
 
 </main>
@@ -231,6 +234,14 @@
             escapeHtml(eq.code) + (eq.equipment_type ? ' — ' + escapeHtml(eq.equipment_type) : '') +
             '</option>';
         }).join('');
+
+      // If we arrived here from an equipment card (equipment-cards.html),
+      // pre-select that equipment and its department automatically.
+      const presetEquipmentId = new URLSearchParams(window.location.search).get('equipment_id');
+      if (presetEquipmentId && equipmentCache[presetEquipmentId]) {
+        equipmentSelect.value = presetEquipmentId;
+        departmentSelect.value = equipmentCache[presetEquipmentId].department_id;
+      }
     } catch (err) {
       equipmentSelect.innerHTML = '<option value="">تعذر الاتصال بالخادم</option>';
     }
@@ -271,6 +282,33 @@
     delivered: 'تم التسليم', cancelled: 'ملغاة',
   };
 
+  const entriesPager = createPaginator(document.getElementById('entriesPager'), 10, renderEntryRows);
+
+  function renderEntryRows(pageItems) {
+    if (pageItems.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="8" class="empty-row">لا يوجد معدات داخل الورشة حاليًا</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = pageItems.map(function (entry) {
+      return '<tr>' +
+        '<td class="cell-mono">' + escapeHtml(entry.entry_number) + '</td>' +
+        '<td class="cell-mono">' + escapeHtml(entry.equipment_code) + '</td>' +
+        '<td>' + escapeHtml(entry.department_name) + '</td>' +
+        '<td><span class="badge ' + typeBadgeClass[entry.maintenance_type] + '">' + entry.maintenance_type + '</span></td>' +
+        '<td><span class="badge ' + priorityBadgeClass[entry.priority] + '">' + priorityLabels[entry.priority] + '</span></td>' +
+        '<td>' + (progressLabels[entry.progress_status] || '-') + '</td>' +
+        '<td class="cell-mono">' + entry.entry_date + ' ' + entry.entry_time + '</td>' +
+        '<td>' +
+          (entry.status === 'open' ? '<a href="workshop-entry-close.html?id=' + entry.id + '" class="btn-link link-success"><i data-lucide="log-out"></i> إقفال</a> ' : '') +
+          '<a href="job-card.html?id=' + entry.job_card_id + '" class="btn-link link-edit"><i data-lucide="file-text"></i> بطاقة الشغل</a>' +
+        '</td>' +
+        '</tr>';
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
   async function loadOpenEntries() {
     showStatus('جاري التحميل...', '');
     try {
@@ -283,25 +321,7 @@
         return;
       }
 
-      if (body.data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="8" class="empty-row">لا يوجد معدات داخل الورشة حاليًا</td></tr>';
-      } else {
-        tableBody.innerHTML = body.data.map(function (entry) {
-          return '<tr>' +
-            '<td class="cell-mono">' + escapeHtml(entry.entry_number) + '</td>' +
-            '<td class="cell-mono">' + escapeHtml(entry.equipment_code) + '</td>' +
-            '<td>' + escapeHtml(entry.department_name) + '</td>' +
-            '<td><span class="badge ' + typeBadgeClass[entry.maintenance_type] + '">' + entry.maintenance_type + '</span></td>' +
-            '<td><span class="badge ' + priorityBadgeClass[entry.priority] + '">' + priorityLabels[entry.priority] + '</span></td>' +
-            '<td>' + (progressLabels[entry.progress_status] || '-') + '</td>' +
-            '<td class="cell-mono">' + entry.entry_date + ' ' + entry.entry_time + '</td>' +
-            '<td>' +
-              (entry.status === 'open' ? '<a href="workshop-entry-close.html?id=' + entry.id + '" class="btn-link link-success"><i data-lucide="log-out"></i> إقفال</a> ' : '') +
-              '<a href="job-card.html?id=' + entry.job_card_id + '" class="btn-link link-edit"><i data-lucide="file-text"></i> بطاقة الشغل</a>' +
-            '</td>' +
-            '</tr>';
-        }).join('');
-      }
+      entriesPager.setItems(body.data);
 
       showStatus('تم التحميل بنجاح (' + body.data.length + ' زيارة مفتوحة)', 'ok');
       if (window.lucide) lucide.createIcons();

@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 <script src="assets/upload.js"></script>
+<script src="assets/pagination.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -20,9 +21,10 @@
     HeavyCare
   </div>
   <nav class="nav-pills">
+    <a href="equipment-cards.html" class="nav-pill"><i data-lucide="home"></i> الرئيسية</a>
     <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
     <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
-    <a href="equipment.html" class="nav-pill active"><i data-lucide="truck"></i> المعدات</a>
+    <a href="equipment.html" class="nav-pill active"><i data-lucide="truck"></i> إدارة المعدات</a>
     <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
       <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
     <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
@@ -139,6 +141,7 @@
       </thead>
       <tbody id="tableBody"></tbody>
     </table>
+    <div id="equipmentPager" class="no-print"></div>
   </div>
 
 </main>
@@ -302,6 +305,37 @@
     }
   }
 
+  const equipmentPager = createPaginator(document.getElementById('equipmentPager'), 10, renderEquipmentRows);
+
+  function renderEquipmentRows(pageItems) {
+    if (pageItems.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="7" class="empty-row">لا يوجد معدات مسجلة بعد</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = pageItems.map(function (eq) {
+      const brandModel = [eq.brand, eq.model].filter(Boolean).join(' / ') || '-';
+      const thumb = eq.image_url
+        ? '<img src="' + eq.image_url + '" style="width:36px; height:36px; border-radius:6px; object-fit:cover;">'
+        : '<div style="width:36px; height:36px; border-radius:6px; background:var(--color-bg);"></div>';
+      return '<tr>' +
+        '<td>' + thumb + '</td>' +
+        '<td class="cell-mono">' + escapeHtml(eq.code) + '</td>' +
+        '<td>' + escapeHtml(eq.equipment_type || '-') + '</td>' +
+        '<td>' + escapeHtml(eq.department_name) + '</td>' +
+        '<td>' + escapeHtml(brandModel) + '</td>' +
+        '<td><span class="badge ' + statusBadgeClass[eq.current_status] + '">' + statusLabels[eq.current_status] + '</span></td>' +
+        '<td class="cell-mono">' + eq.hour_meter + '</td>' +
+        '<td>' +
+          '<button type="button" class="btn-link link-edit" data-edit-id="' + eq.id + '"><i data-lucide="pencil"></i> تعديل</button> ' +
+          '<button type="button" class="btn-link link-danger" data-archive-id="' + eq.id + '" data-archive-code="' + escapeHtml(eq.code) + '"><i data-lucide="archive"></i> أرشفة</button>' +
+        '</td>' +
+        '</tr>';
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
   async function loadEquipment() {
     showStatus('جاري التحميل...', '');
     try {
@@ -314,32 +348,9 @@
         return;
       }
 
-      if (body.data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" class="empty-row">لا يوجد معدات مسجلة بعد</td></tr>';
-      } else {
-        window.__equipmentCache = {};
-        body.data.forEach(function (eq) { window.__equipmentCache[eq.id] = eq; });
-
-        tableBody.innerHTML = body.data.map(function (eq) {
-          const brandModel = [eq.brand, eq.model].filter(Boolean).join(' / ') || '-';
-          const thumb = eq.image_url
-            ? '<img src="' + eq.image_url + '" style="width:36px; height:36px; border-radius:6px; object-fit:cover;">'
-            : '<div style="width:36px; height:36px; border-radius:6px; background:var(--color-bg);"></div>';
-          return '<tr>' +
-            '<td>' + thumb + '</td>' +
-            '<td class="cell-mono">' + escapeHtml(eq.code) + '</td>' +
-            '<td>' + escapeHtml(eq.equipment_type || '-') + '</td>' +
-            '<td>' + escapeHtml(eq.department_name) + '</td>' +
-            '<td>' + escapeHtml(brandModel) + '</td>' +
-            '<td><span class="badge ' + statusBadgeClass[eq.current_status] + '">' + statusLabels[eq.current_status] + '</span></td>' +
-            '<td class="cell-mono">' + eq.hour_meter + '</td>' +
-            '<td>' +
-              '<button type="button" class="btn-link link-edit" data-edit-id="' + eq.id + '"><i data-lucide="pencil"></i> تعديل</button> ' +
-              '<button type="button" class="btn-link link-danger" data-archive-id="' + eq.id + '" data-archive-code="' + escapeHtml(eq.code) + '"><i data-lucide="archive"></i> أرشفة</button>' +
-            '</td>' +
-            '</tr>';
-        }).join('');
-      }
+      window.__equipmentCache = {};
+      body.data.forEach(function (eq) { window.__equipmentCache[eq.id] = eq; });
+      equipmentPager.setItems(body.data);
 
       showStatus('تم التحميل بنجاح (' + body.data.length + ' معدة)', 'ok');
       if (window.lucide) lucide.createIcons();

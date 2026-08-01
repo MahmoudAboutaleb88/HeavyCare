@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="assets/pagination.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 <style>
   .role-select-hint { font-size: 11.5px; color: var(--color-ink-muted); margin-top: 4px; }
@@ -22,9 +23,10 @@
     HeavyCare
   </div>
   <nav class="nav-pills">
+    <a href="equipment-cards.html" class="nav-pill"><i data-lucide="home"></i> الرئيسية</a>
     <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
     <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
-    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> إدارة المعدات</a>
     <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
     <a href="users.html" class="nav-pill active"><i data-lucide="users"></i> المستخدمين</a>
     <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
@@ -125,6 +127,7 @@
       </thead>
       <tbody id="tableBody"></tbody>
     </table>
+    <div id="usersPager" class="no-print"></div>
   </div>
 
 </main>
@@ -260,6 +263,34 @@
     } catch (err) { /* dropdown stays with default option */ }
   }
 
+  const usersPager = createPaginator(document.getElementById('usersPager'), 10, renderUserRows);
+
+  function renderUserRows(pageItems) {
+    if (pageItems.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="empty-row">لا يوجد مستخدمين</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = pageItems.map(function (u) {
+      const statusBadge = u.is_active
+        ? '<span class="badge badge-success">مفعّل</span>'
+        : '<span class="badge badge-neutral">موقوف</span>';
+      const editBtn = isAdmin
+        ? '<button type="button" class="btn-link link-edit" data-edit-id="' + u.id + '"><i data-lucide="pencil"></i> تعديل</button>'
+        : '';
+      return '<tr>' +
+        '<td>' + escapeHtml(u.full_name) + '</td>' +
+        '<td class="cell-mono">' + escapeHtml(u.username) + '</td>' +
+        '<td><span class="badge badge-info">' + roleLabels[u.role] + '</span></td>' +
+        '<td>' + escapeHtml(u.department_name || '-') + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td>' + editBtn + '</td>' +
+        '</tr>';
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
   async function loadUsers() {
     showStatus('جاري التحميل...', '');
     try {
@@ -275,27 +306,7 @@
 
       usersCache = {};
       body.data.forEach(function (u) { usersCache[u.id] = u; });
-
-      if (body.data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="empty-row">لا يوجد مستخدمين</td></tr>';
-      } else {
-        tableBody.innerHTML = body.data.map(function (u) {
-          const statusBadge = u.is_active
-            ? '<span class="badge badge-success">مفعّل</span>'
-            : '<span class="badge badge-neutral">موقوف</span>';
-          const editBtn = isAdmin
-            ? '<button type="button" class="btn-link link-edit" data-edit-id="' + u.id + '"><i data-lucide="pencil"></i> تعديل</button>'
-            : '';
-          return '<tr>' +
-            '<td>' + escapeHtml(u.full_name) + '</td>' +
-            '<td class="cell-mono">' + escapeHtml(u.username) + '</td>' +
-            '<td><span class="badge badge-info">' + roleLabels[u.role] + '</span></td>' +
-            '<td>' + escapeHtml(u.department_name || '-') + '</td>' +
-            '<td>' + statusBadge + '</td>' +
-            '<td>' + editBtn + '</td>' +
-            '</tr>';
-        }).join('');
-      }
+      usersPager.setItems(body.data);
 
       showStatus('تم التحميل بنجاح (' + body.data.length + ' مستخدم)', 'ok');
       if (window.lucide) lucide.createIcons();

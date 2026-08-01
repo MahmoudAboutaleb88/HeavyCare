@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeavyCare — المعدات</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="assets/pagination.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .toolbar input[type="text"] { max-width: 280px; }
+  .toolbar select { max-width: 200px; }
+  .status-legend { display: flex; gap: 14px; margin-inline-start: auto; font-size: 12px; color: var(--color-ink-muted); }
+  .status-legend span { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  .equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .eq-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--shadow-card);
+    transition: transform 0.12s, box-shadow 0.12s;
+    position: relative;
+  }
+  .eq-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-raised); }
+
+  .eq-card .status-dot {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    z-index: 2;
+  }
+  .status-dot.available { background: var(--color-success); }
+  .status-dot.in_workshop { background: var(--color-amber); }
+  .status-dot.breakdown { background: var(--color-danger); }
+
+  .eq-card .eq-image {
+    width: 100%;
+    height: 130px;
+    background: var(--color-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .eq-card .eq-image img { width: 100%; height: 100%; object-fit: cover; }
+  .eq-card .eq-image svg { width: 34px; height: 34px; color: var(--color-border-strong); }
+
+  .eq-card .eq-body { padding: 12px 14px; }
+  .eq-card .eq-code { font-family: var(--font-mono); font-weight: 700; font-size: 14px; color: var(--color-ink); }
+  .eq-card .eq-type { font-size: 12px; color: var(--color-ink-muted); margin-top: 2px; }
+  .eq-card .eq-dept {
+    font-size: 11px;
+    color: var(--color-ink-muted);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .eq-card .eq-dept svg { width: 11px; height: 11px; }
+
+  /* ---- Detail modal ---- */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(28,37,48,0.55);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    max-width: 420px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  }
+  .modal-box .modal-image { width: 100%; height: 180px; background: var(--color-bg); display: flex; align-items: center; justify-content: center; }
+  .modal-box .modal-image img { width: 100%; height: 100%; object-fit: cover; }
+  .modal-box .modal-body { padding: 20px; }
+  .modal-box .modal-close {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: rgba(0,0,0,0.4);
+    color: #fff;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .modal-title { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .modal-title h2 { margin: 0; font-size: 18px; font-family: var(--font-mono); }
+  .modal-sub { color: var(--color-ink-muted); font-size: 13px; margin-bottom: 16px; }
+  .modal-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; font-size: 13px; margin-bottom: 18px; }
+  .modal-fields .f-label { color: var(--color-ink-muted); font-size: 11.5px; }
+  .modal-fields .f-value { font-weight: 600; }
+  .modal-action-btn { width: 100%; justify-content: center; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
+  </div>
+  <nav class="nav-pills">
+    <a href="equipment-cards.html" class="nav-pill active"><i data-lucide="home"></i> الرئيسية</a>
+    <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="table"></i> إدارة المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+    <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
+    <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+    <a href="notifications.html" class="nav-pill"><i data-lucide="bell"></i> التنبيهات<span class="notif-badge" id="notifBadge">0</span></a>
+  </nav>
+
+  <div class="global-search">
+    <i data-lucide="search"></i>
+    <input type="text" id="globalSearchInput" placeholder="بحث بالكود، رقم الزيارة، الاسم...">
+    <div id="globalSearchResults" class="search-results"></div>
+  </div>
+
+  <div class="session">
+    <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
+    <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
+  </div>
+</header>
+
+<main class="page page-wide">
+
+  <div class="nameplate">
+    <div class="eyebrow">FLEET OVERVIEW</div>
+    <h1>المعدات</h1>
+    <p>دوس على أي معدة عشان تشوف تفاصيلها وتاخد إجراء عليها</p>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchBox" placeholder="دور بالكود أو النوع...">
+    <select id="statusFilter">
+      <option value="">كل الحالات</option>
+      <option value="available">متاحة</option>
+      <option value="in_workshop">داخل الورشة</option>
+      <option value="breakdown">معطلة</option>
+    </select>
+    <select id="deptFilter"><option value="">كل الإدارات</option></select>
+
+    <div class="status-legend">
+      <span><span class="legend-dot" style="background:var(--color-success);"></span> متاحة</span>
+      <span><span class="legend-dot" style="background:var(--color-amber);"></span> داخل الورشة</span>
+      <span><span class="legend-dot" style="background:var(--color-danger);"></span> معطلة</span>
+    </div>
+  </div>
+
+  <div id="loadingBox" style="text-align:center; color:var(--color-ink-muted); padding:40px 0;">جاري التحميل...</div>
+  <div class="equipment-grid" id="equipmentGrid" style="display:none;"></div>
+  <div id="gridPager"></div>
+
+</main>
+
+<!-- ---- Equipment detail modal ---- -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" style="position:relative;">
+    <button type="button" class="modal-close" id="modalClose"><i data-lucide="x"></i></button>
+    <div class="modal-image" id="modalImage"></div>
+    <div class="modal-body">
+      <div class="modal-title">
+        <span class="status-dot" id="modalStatusDot" style="position:static;"></span>
+        <h2 id="modalCode"></h2>
+      </div>
+      <p class="modal-sub" id="modalType"></p>
+
+      <div class="modal-fields" id="modalFields"></div>
+
+      <div id="modalActionArea"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- Auth guard ----
+  const authToken = localStorage.getItem('auth_token');
+  const authUserRaw = localStorage.getItem('auth_user');
+
+  if (!authToken || !authUserRaw) {
+    window.location.href = 'login.html';
+    throw new Error('Not authenticated');
+  }
+
+  const authUser = JSON.parse(authUserRaw);
+  document.getElementById('userName').textContent = authUser.full_name;
+  document.getElementById('userRole').textContent = authUser.role;
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = 'login.html';
+  });
+
+  function authHeaders(extra) {
+    return Object.assign({ Authorization: 'Bearer ' + authToken }, extra || {});
+  }
+
+  function handleUnauthorized(res) {
+    if (res.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      window.location.href = 'login.html';
+      return true;
+    }
+    return false;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  const statusLabels = { available: 'متاحة', in_workshop: 'داخل الورشة', breakdown: 'معطلة' };
+
+  const loadingBox = document.getElementById('loadingBox');
+  const grid = document.getElementById('equipmentGrid');
+  const searchBox = document.getElementById('searchBox');
+  const statusFilter = document.getElementById('statusFilter');
+  const deptFilter = document.getElementById('deptFilter');
+
+  let allEquipment = [];
+  let equipmentCache = {};
+
+  async function loadDepartmentFilter() {
+    try {
+      const res = await fetch('/api/departments', { headers: authHeaders() });
+      const body = await res.json();
+      if (!body.success) return;
+      deptFilter.innerHTML = '<option value="">كل الإدارات</option>' +
+        body.data.map(function (d) { return '<option value="' + d.id + '">' + escapeHtml(d.name) + '</option>'; }).join('');
+    } catch (err) { /* leave default */ }
+  }
+
+  async function loadEquipment() {
+    try {
+      const res = await fetch('/api/equipment', { headers: authHeaders() });
+      if (handleUnauthorized(res)) return;
+      const body = await res.json();
+
+      if (!body.success) {
+        loadingBox.textContent = 'خطأ: ' + body.error;
+        return;
+      }
+
+      allEquipment = body.data;
+      equipmentCache = {};
+      allEquipment.forEach(function (eq) { equipmentCache[eq.id] = eq; });
+
+      loadingBox.style.display = 'none';
+      grid.style.display = 'grid';
+      renderGrid();
+    } catch (err) {
+      loadingBox.textContent = 'تعذر الاتصال بالخادم: ' + err.message;
+    }
+  }
+
+  const gridPager = createPaginator(document.getElementById('gridPager'), 12, renderGridCards);
+
+  function renderGridCards(pageItems) {
+    if (pageItems.length === 0) {
+      grid.innerHTML = '<div class="empty-row" style="grid-column:1/-1;">لا يوجد معدات مطابقة</div>';
+      return;
+    }
+
+    grid.innerHTML = pageItems.map(function (eq) {
+      const img = eq.image_url
+        ? '<img src="' + eq.image_url + '">'
+        : '<i data-lucide="truck"></i>';
+      return '<div class="eq-card" data-eq-id="' + eq.id + '">' +
+        '<span class="status-dot ' + eq.current_status + '"></span>' +
+        '<div class="eq-image">' + img + '</div>' +
+        '<div class="eq-body">' +
+          '<div class="eq-code">' + escapeHtml(eq.code) + '</div>' +
+          '<div class="eq-type">' + escapeHtml(eq.equipment_type || '—') + '</div>' +
+          '<div class="eq-dept"><i data-lucide="building-2"></i> ' + escapeHtml(eq.department_name) + '</div>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderGrid() {
+    const q = searchBox.value.trim().toLowerCase();
+    const statusVal = statusFilter.value;
+    const deptVal = deptFilter.value;
+
+    const filtered = allEquipment.filter(function (eq) {
+      if (statusVal && eq.current_status !== statusVal) return false;
+      if (deptVal && String(eq.department_id) !== deptVal) return false;
+      if (q) {
+        const haystack = (eq.code + ' ' + (eq.equipment_type || '') + ' ' + (eq.brand || '')).toLowerCase();
+        if (haystack.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+
+    gridPager.setItems(filtered);
+  }
+
+  searchBox.addEventListener('input', renderGrid);
+  statusFilter.addEventListener('change', renderGrid);
+  deptFilter.addEventListener('change', renderGrid);
+
+  // ---- Detail modal ----
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalImage = document.getElementById('modalImage');
+  const modalStatusDot = document.getElementById('modalStatusDot');
+  const modalCode = document.getElementById('modalCode');
+  const modalType = document.getElementById('modalType');
+  const modalFields = document.getElementById('modalFields');
+  const modalActionArea = document.getElementById('modalActionArea');
+
+  function openModal(eq) {
+    modalImage.innerHTML = eq.image_url
+      ? '<img src="' + eq.image_url + '">'
+      : '<i data-lucide="truck" style="width:44px; height:44px; color:var(--color-border-strong);"></i>';
+
+    modalStatusDot.className = 'status-dot ' + eq.current_status;
+    modalCode.textContent = eq.code;
+    modalType.textContent = (eq.equipment_type || 'معدة') + ' — ' + statusLabels[eq.current_status];
+
+    modalFields.innerHTML =
+      '<div><div class="f-label">الإدارة</div><div class="f-value">' + escapeHtml(eq.department_name) + '</div></div>' +
+      '<div><div class="f-label">الماركة / الموديل</div><div class="f-value">' + escapeHtml([eq.brand, eq.model].filter(Boolean).join(' / ') || '-') + '</div></div>' +
+      '<div><div class="f-label">رقم الأصل</div><div class="f-value">' + escapeHtml(eq.asset_number || '-') + '</div></div>' +
+      '<div><div class="f-label">قراءة العداد</div><div class="f-value">' + eq.hour_meter + '</div></div>';
+
+    if (eq.current_status === 'in_workshop' && eq.current_job_card_id) {
+      modalActionArea.innerHTML =
+        '<p style="font-size:12.5px; color:var(--color-ink-muted); margin-bottom:10px;">داخل الورشة حاليًا — زيارة رقم <strong>' + escapeHtml(eq.current_entry_number) + '</strong></p>' +
+        '<a href="job-card.html?id=' + eq.current_job_card_id + '" class="btn btn-primary modal-action-btn"><i data-lucide="file-text"></i> فتح بطاقة الشغل</a>';
+    } else {
+      modalActionArea.innerHTML =
+        '<a href="workshop-entries.html?equipment_id=' + eq.id + '" class="btn btn-success modal-action-btn"><i data-lucide="log-in"></i> تسجيل دخول للورشة</a>';
+    }
+
+    modalOverlay.classList.add('open');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove('open');
+  }
+
+  grid.addEventListener('click', function (e) {
+    const card = e.target.closest('[data-eq-id]');
+    if (!card) return;
+    const eq = equipmentCache[card.getAttribute('data-eq-id')];
+    if (eq) openModal(eq);
+  });
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', function (e) {
+    if (e.target === modalOverlay) closeModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  loadDepartmentFilter();
+  loadEquipment();
+  if (window.lucide) lucide.createIcons();
+</script>
+
+<script src="assets/search.js"></script>
+<script src="assets/notifications.js"></script>
+</body>
+</html>
