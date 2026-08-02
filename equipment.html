@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2B3440">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>HeavyCare — المعدات</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -65,7 +69,7 @@
           </div>
         </div>
 
-        <div class="field-full" style="display:grid; grid-template-columns:1fr 1fr; gap:14px 18px;">
+        <div class="field-full sub-grid-2">
           <div>
             <label>كود المعدة <span class="req">*</span></label>
             <input type="text" id="code" required>
@@ -327,6 +331,7 @@
         '<td><span class="badge ' + statusBadgeClass[eq.current_status] + '">' + statusLabels[eq.current_status] + '</span></td>' +
         '<td class="cell-mono">' + eq.hour_meter + '</td>' +
         '<td>' +
+          '<a href="equipment-history.html?id=' + eq.id + '" class="btn-link link-edit"><i data-lucide="history"></i> السجل</a> ' +
           '<button type="button" class="btn-link link-edit" data-edit-id="' + eq.id + '"><i data-lucide="pencil"></i> تعديل</button> ' +
           '<button type="button" class="btn-link link-danger" data-archive-id="' + eq.id + '" data-archive-code="' + escapeHtml(eq.code) + '"><i data-lucide="archive"></i> أرشفة</button>' +
         '</td>' +
@@ -452,5 +457,6 @@
 
 <script src="assets/search.js"></script>
 <script src="assets/notifications.js"></script>
+<script src="assets/pwa.js"></script>
 </body>
 </html>

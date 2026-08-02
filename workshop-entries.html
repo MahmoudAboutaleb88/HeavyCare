@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2B3440">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>HeavyCare — دخول الورشة</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,6 +31,10 @@
     margin: 0;
   }
   .maintenance-toggle input { width: auto; }
+
+  @media (max-width: 520px) {
+    .maintenance-toggle { flex-direction: column; }
+  }
 </style>
 </head>
 <body>
@@ -382,5 +390,6 @@
 
 <script src="assets/search.js"></script>
 <script src="assets/notifications.js"></script>
+<script src="assets/pwa.js"></script>
 </body>
 </html>

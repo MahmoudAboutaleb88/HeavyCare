@@ -3,75 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>إعداد أول حساب مدير</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2B3440">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>HeavyCare — إعداد أول حساب مدير</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
 <style>
-  * { box-sizing: border-box; }
   body {
-    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-    background: #f4f6f8;
-    margin: 0;
-    padding: 40px 20px;
-    color: #1f2937;
+    background: linear-gradient(160deg, var(--color-steel) 0%, #1B222C 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
   }
-  .container {
-    max-width: 420px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    padding: 28px;
+  .setup-shell { width: 100%; max-width: 420px; }
+  .setup-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border-top: 4px solid var(--color-amber);
   }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p.subtitle { color: #6b7280; margin: 0 0 24px; font-size: 14px; }
-  label { display: block; font-size: 13px; margin: 14px 0 4px; color: #374151; }
-  input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
-  }
-  button {
-    width: 100%;
-    margin-top: 20px;
-    background: #16a34a;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  button:hover { background: #15803d; }
-  button:disabled { background: #93a3ba; cursor: not-allowed; }
-  .status { font-size: 13px; margin-top: 16px; min-height: 18px; white-space: pre-wrap; }
-  .status.error { color: #dc2626; }
-  .status.ok { color: #16a34a; }
+  .setup-card h1 { font-size: 18px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  .setup-card p.sub { color: var(--color-ink-muted); font-size: 13px; margin: 0 0 22px; }
+  .setup-card .btn { width: 100%; margin-top: 18px; justify-content: center; }
+  .setup-card label { margin-top: 14px; }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>إعداد أول حساب مدير</h1>
-  <p class="subtitle">استخدم الصفحة دي مرة واحدة بس. بعد إنشاء أول حساب، الصفحة دي مش هتشتغل تاني (محمية تلقائيًا).</p>
+<div class="setup-shell">
+  <div class="setup-card">
+    <h1><i data-lucide="shield-check"></i> إعداد أول حساب مدير</h1>
+    <p class="sub">استخدم الصفحة دي مرة واحدة بس. بعد إنشاء أول حساب، الصفحة دي مش هتشتغل تاني (محمية تلقائيًا).</p>
 
-  <form id="setupForm">
-    <label>المفتاح السري (Setup Key)</label>
-    <input type="password" id="setupKey" required>
+    <form id="setupForm">
+      <label>المفتاح السري (Setup Key)</label>
+      <input type="password" id="setupKey" required>
 
-    <label>الاسم الكامل</label>
-    <input type="text" id="fullName" required>
+      <label>الاسم الكامل</label>
+      <input type="text" id="fullName" required>
 
-    <label>اسم المستخدم (Username)</label>
-    <input type="text" id="username" required>
+      <label>اسم المستخدم (Username)</label>
+      <input type="text" id="username" required>
 
-    <label>كلمة السر (8 أحرف على الأقل)</label>
-    <input type="password" id="password" minlength="8" required>
+      <label>كلمة السر (8 أحرف على الأقل)</label>
+      <input type="password" id="password" minlength="8" required>
 
-    <button type="submit" id="submitBtn">إنشاء الحساب</button>
-  </form>
+      <button type="submit" id="submitBtn" class="btn btn-success"><i data-lucide="user-plus"></i> إنشاء الحساب</button>
+    </form>
 
-  <div id="status" class="status"></div>
+    <div id="status" class="status-msg"></div>
+  </div>
 </div>
 
 <script>
@@ -81,7 +71,7 @@
 
   function showStatus(message, type) {
     statusEl.textContent = message;
-    statusEl.className = 'status ' + (type || '');
+    statusEl.className = 'status-msg ' + (type === 'error' ? 'is-error' : type === 'ok' ? 'is-ok' : '');
   }
 
   formEl.addEventListener('submit', async function (e) {
@@ -115,7 +105,10 @@
       submitBtn.disabled = false;
     }
   });
+
+  if (window.lucide) lucide.createIcons();
 </script>
 
+<script src="assets/pwa.js"></script>
 </body>
 </html>

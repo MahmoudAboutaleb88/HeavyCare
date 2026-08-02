@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2B3440">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>HeavyCare — بطاقة الشغل</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -97,6 +101,12 @@
   }
   .photo-upload-btn input { display: none; }
   .photo-upload-btn svg { width: 13px; height: 13px; }
+
+  @media (max-width: 640px) {
+    .parts-form { grid-template-columns: 1fr; }
+    .parts-form button { width: 100%; }
+    .photo-thumb { width: 72px; height: 72px; }
+  }
 </style>
 </head>
 <body>
@@ -107,9 +117,10 @@
     HeavyCare
   </div>
   <nav class="nav-pills">
+    <a href="equipment-cards.html" class="nav-pill"><i data-lucide="home"></i> الرئيسية</a>
     <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
     <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
-    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> المعدات</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> إدارة المعدات</a>
     <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
     <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
     <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
@@ -595,5 +606,6 @@
 
 <script src="assets/search.js"></script>
 <script src="assets/notifications.js"></script>
+<script src="assets/pwa.js"></script>
 </body>
 </html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2B3440">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>HeavyCare — سجل المعدة</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .eq-summary-card {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .eq-summary-card .eq-photo {
+    width: 76px; height: 76px; border-radius: 10px; flex-shrink: 0;
+    background: var(--color-bg); display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .eq-summary-card .eq-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .eq-summary-card .eq-photo svg { width: 30px; height: 30px; color: var(--color-border-strong); }
+  .eq-summary-card h2 { margin: 0; font-family: var(--font-mono); font-size: 18px; }
+  .eq-summary-card .eq-meta { font-size: 12.5px; color: var(--color-ink-muted); margin-top: 3px; }
+
+  .stats-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin: 18px 0 0;
+  }
+  .stats-strip .mini-stat {
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .stats-strip .mini-stat .num { font-family: var(--font-mono); font-size: 19px; font-weight: 700; }
+  .stats-strip .mini-stat .lbl { font-size: 11px; color: var(--color-ink-muted); margin-top: 2px; }
+
+  .timeline { position: relative; padding-inline-start: 22px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    right: 6px; top: 6px; bottom: 6px;
+    width: 2px;
+    background: var(--color-border);
+  }
+  .timeline-item { position: relative; padding-bottom: 22px; }
+  .timeline-item:last-child { padding-bottom: 0; }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    right: -22px; top: 4px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--color-surface);
+  }
+  .timeline-item.status-open::before { background: var(--color-amber); }
+  .timeline-item.status-closed::before { background: var(--color-success); }
+
+  .tl-card {
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+  .tl-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
+  .tl-head .tl-title { font-family: var(--font-mono); font-weight: 700; font-size: 13.5px; }
+  .tl-dates { font-size: 12px; color: var(--color-ink-muted); font-family: var(--font-mono); }
+  .tl-problem { font-size: 13px; margin-bottom: 6px; }
+  .tl-result { font-size: 12.5px; color: var(--color-ink-muted); margin-bottom: 8px; }
+  .tl-foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+  .tl-cost { font-family: var(--font-mono); font-weight: 600; color: var(--color-amber-dark); }
+
+  @media (max-width: 640px) {
+    .stats-strip { grid-template-columns: 1fr 1fr; }
+    .eq-summary-card { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark"><i data-lucide="wrench"></i></span>
+    HeavyCare
+  </div>
+  <nav class="nav-pills">
+    <a href="equipment-cards.html" class="nav-pill"><i data-lucide="home"></i> الرئيسية</a>
+    <a href="dashboard.html" class="nav-pill"><i data-lucide="gauge"></i> اللوحة</a>
+    <a href="index.html" class="nav-pill"><i data-lucide="layout-grid"></i> الأقسام</a>
+    <a href="equipment.html" class="nav-pill"><i data-lucide="truck"></i> إدارة المعدات</a>
+    <a href="workshop-entries.html" class="nav-pill"><i data-lucide="clipboard-list"></i> دخول الورشة</a>
+    <a href="users.html" class="nav-pill"><i data-lucide="users"></i> المستخدمين</a>
+    <a href="reports.html" class="nav-pill"><i data-lucide="file-text"></i> التقارير</a>
+    <a href="notifications.html" class="nav-pill"><i data-lucide="bell"></i> التنبيهات<span class="notif-badge" id="notifBadge">0</span></a>
+  </nav>
+
+  <div class="global-search">
+    <i data-lucide="search"></i>
+    <input type="text" id="globalSearchInput" placeholder="بحث بالكود، رقم الزيارة، الاسم...">
+    <div id="globalSearchResults" class="search-results"></div>
+  </div>
+
+  <div class="session">
+    <span><span class="user-name" id="userName"></span><span class="user-role" id="userRole"></span></span>
+    <button type="button" id="logoutBtn" class="logout-link"><i data-lucide="log-out"></i> خروج</button>
+  </div>
+</header>
+
+<main class="page page-narrow">
+
+  <div class="nameplate">
+    <div class="eyebrow">MAINTENANCE HISTORY</div>
+    <h1>سجل المعدة</h1>
+    <p>كل زيارة اتسجّلت للمعدة دي — من أول دخول لحد آخر خروج</p>
+  </div>
+
+  <div id="loadingBox" style="text-align:center; color:var(--color-ink-muted); padding:40px 0;">جاري التحميل...</div>
+
+  <div id="content" style="display:none;">
+    <div class="card">
+      <div class="eq-summary-card">
+        <div class="eq-photo" id="eqPhoto"><i data-lucide="truck"></i></div>
+        <div>
+          <h2 id="eqCode"></h2>
+          <div class="eq-meta" id="eqMeta"></div>
+        </div>
+      </div>
+
+      <div class="stats-strip" id="statsStrip"></div>
+    </div>
+
+    <div class="card">
+      <h2>الخط الزمني</h2>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ---- Auth guard ----
+  const authToken = localStorage.getItem('auth_token');
+  const authUserRaw = localStorage.getItem('auth_user');
+
+  if (!authToken || !authUserRaw) {
+    window.location.href = 'login.html';
+    throw new Error('Not authenticated');
+  }
+
+  const authUser = JSON.parse(authUserRaw);
+  document.getElementById('userName').textContent = authUser.full_name;
+  document.getElementById('userRole').textContent = authUser.role;
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = 'login.html';
+  });
+
+  function authHeaders(extra) {
+    return Object.assign({ Authorization: 'Bearer ' + authToken }, extra || {});
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const equipmentId = params.get('id');
+
+  const loadingBox = document.getElementById('loadingBox');
+  const contentBox = document.getElementById('content');
+
+  const typeLabels = { PM: 'صيانة دورية', BD: 'عطل' };
+  const statusLabels = { open: 'مفتوحة', closed: 'مقفولة' };
+  const progressLabels = {
+    waiting: 'في الانتظار', inspection: 'جاري الفحص', repairing: 'جاري الإصلاح',
+    waiting_spare_parts: 'انتظار قطع غيار', testing: 'اختبار', completed: 'مكتملة',
+    delivered: 'تم التسليم', cancelled: 'ملغاة',
+  };
+
+  async function loadHistory() {
+    if (!equipmentId) {
+      loadingBox.textContent = 'رقم المعدة غير موجود في الرابط';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/equipment/' + equipmentId + '/history', { headers: authHeaders() });
+      if (res.status === 401) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = 'login.html';
+        return;
+      }
+      const body = await res.json();
+
+      if (!body.success) {
+        loadingBox.textContent = 'خطأ: ' + body.error;
+        return;
+      }
+
+      const eq = body.data.equipment;
+      const entries = body.data.entries;
+      const stats = body.data.stats;
+
+      document.getElementById('eqPhoto').innerHTML = eq.image_url
+        ? '<img src="' + eq.image_url + '">'
+        : '<i data-lucide="truck"></i>';
+      document.getElementById('eqCode').textContent = eq.code;
+      document.getElementById('eqMeta').textContent =
+        (eq.equipment_type || 'معدة') + ' — ' + eq.department_name +
+        ([eq.brand, eq.model].filter(Boolean).length ? ' — ' + [eq.brand, eq.model].filter(Boolean).join(' / ') : '');
+
+      document.getElementById('statsStrip').innerHTML =
+        '<div class="mini-stat"><div class="num">' + stats.total_visits + '</div><div class="lbl">إجمالي الزيارات</div></div>' +
+        '<div class="mini-stat"><div class="num">' + stats.pm_count + '</div><div class="lbl">صيانة دورية</div></div>' +
+        '<div class="mini-stat"><div class="num">' + stats.bd_count + '</div><div class="lbl">أعطال</div></div>' +
+        '<div class="mini-stat"><div class="num">' + (stats.avg_hours_pm != null ? stats.avg_hours_pm : '-') + '</div><div class="lbl">متوسط ساعات PM</div></div>' +
+        '<div class="mini-stat"><div class="num">' + stats.total_cost.toFixed(0) + '</div><div class="lbl">إجمالي التكلفة</div></div>';
+
+      const timelineEl = document.getElementById('timeline');
+
+      if (entries.length === 0) {
+        timelineEl.innerHTML = '<div class="empty-row">لسه مفيش زيارات مسجّلة للمعدة دي</div>';
+      } else {
+        timelineEl.innerHTML = entries.map(function (e) {
+          const cost = (Number(e.labor_cost || 0) + Number(e.parts_cost || 0)).toFixed(2);
+          const duration = e.status === 'closed'
+            ? (e.maintenance_type === 'PM'
+                ? (e.duration_hours != null ? e.duration_hours + ' ساعة' : '-')
+                : (e.duration_days != null ? e.duration_days + ' يوم' : '-'))
+            : (progressLabels[e.progress_status] || 'مفتوحة');
+
+          return '<div class="timeline-item status-' + e.status + '">' +
+            '<div class="tl-card">' +
+              '<div class="tl-head">' +
+                '<span class="tl-title">' + escapeHtml(e.entry_number) + ' · ' + typeLabels[e.maintenance_type] + '</span>' +
+                '<span class="tl-dates">' + e.entry_date + (e.exit_date ? ' → ' + e.exit_date : ' → ' + statusLabels[e.status]) + '</span>' +
+              '</div>' +
+              '<div class="tl-problem">' + escapeHtml(e.reported_problem) + '</div>' +
+              (e.maintenance_result ? '<div class="tl-result">النتيجة: ' + escapeHtml(e.maintenance_result) + '</div>' : '') +
+              '<div class="tl-foot">' +
+                '<span>' + duration + '</span>' +
+                '<span class="tl-cost">' + cost + '</span>' +
+                (e.job_card_id ? '<a href="job-card.html?id=' + e.job_card_id + '" class="btn-link link-edit"><i data-lucide="file-text"></i> بطاقة الشغل</a>' : '<span></span>') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+
+      loadingBox.style.display = 'none';
+      contentBox.style.display = 'block';
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      loadingBox.textContent = 'تعذر الاتصال بالخادم: ' + err.message;
+    }
+  }
+
+  loadHistory();
+  if (window.lucide) lucide.createIcons();
+</script>
+
+<script src="assets/search.js"></script>
+<script src="assets/notifications.js"></script>
+<script src="assets/pwa.js"></script>
+</body>
+</html>

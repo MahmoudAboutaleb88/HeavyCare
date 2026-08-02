@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2B3440">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>HeavyCare — المعدات</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,6 +135,15 @@
   .modal-fields .f-label { color: var(--color-ink-muted); font-size: 11.5px; }
   .modal-fields .f-value { font-weight: 600; }
   .modal-action-btn { width: 100%; justify-content: center; }
+
+  @media (max-width: 640px) {
+    .toolbar input[type="text"], .toolbar select { max-width: none; width: 100%; }
+    .status-legend { margin-inline-start: 0; flex-basis: 100%; justify-content: space-between; }
+    .equipment-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .modal-fields { grid-template-columns: 1fr; }
+    .modal-box { max-width: none; margin: 0; border-radius: var(--radius-md) var(--radius-md) 0 0; align-self: flex-end; }
+    .modal-overlay { align-items: flex-end; padding: 0; }
+  }
 </style>
 </head>
 <body>
@@ -372,10 +385,12 @@
     if (eq.current_status === 'in_workshop' && eq.current_job_card_id) {
       modalActionArea.innerHTML =
         '<p style="font-size:12.5px; color:var(--color-ink-muted); margin-bottom:10px;">داخل الورشة حاليًا — زيارة رقم <strong>' + escapeHtml(eq.current_entry_number) + '</strong></p>' +
-        '<a href="job-card.html?id=' + eq.current_job_card_id + '" class="btn btn-primary modal-action-btn"><i data-lucide="file-text"></i> فتح بطاقة الشغل</a>';
+        '<a href="job-card.html?id=' + eq.current_job_card_id + '" class="btn btn-primary modal-action-btn"><i data-lucide="file-text"></i> فتح بطاقة الشغل</a>' +
+        '<a href="equipment-history.html?id=' + eq.id + '" class="btn btn-secondary modal-action-btn" style="margin-top:8px;"><i data-lucide="history"></i> السجل الكامل</a>';
     } else {
       modalActionArea.innerHTML =
-        '<a href="workshop-entries.html?equipment_id=' + eq.id + '" class="btn btn-success modal-action-btn"><i data-lucide="log-in"></i> تسجيل دخول للورشة</a>';
+        '<a href="workshop-entries.html?equipment_id=' + eq.id + '" class="btn btn-success modal-action-btn"><i data-lucide="log-in"></i> تسجيل دخول للورشة</a>' +
+        '<a href="equipment-history.html?id=' + eq.id + '" class="btn btn-secondary modal-action-btn" style="margin-top:8px;"><i data-lucide="history"></i> السجل الكامل</a>';
     }
 
     modalOverlay.classList.add('open');
@@ -408,5 +423,6 @@
 
 <script src="assets/search.js"></script>
 <script src="assets/notifications.js"></script>
+<script src="assets/pwa.js"></script>
 </body>
 </html>
