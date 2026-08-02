@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
       groups.push(
         '<div class="group-label">المعدات</div>' +
         data.equipment.map(function (e) {
-          return '<a class="result-item" href="equipment.html">' +
+          return '<a class="result-item" href="equipment-history.html?id=' + e.id + '">' +
             '<span class="result-title">' + escapeHtml(e.code) + (e.equipment_type ? ' — ' + escapeHtml(e.equipment_type) : '') + '</span>' +
             '<span class="result-sub">' + escapeHtml(e.department_name) + (e.brand ? ' · ' + escapeHtml(e.brand) : '') + '</span>' +
             '</a>';

@@ -470,8 +470,11 @@ table.data-table {
 }
 .form-grid .field-full { grid-column: 1 / -1; }
 
+.sub-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }
+  .sub-grid-2 { grid-template-columns: 1fr; }
 }
 
 /* ============================================================================
@@ -487,8 +490,17 @@ table.data-table {
     flex-wrap: wrap;
     height: auto;
     padding: 10px 14px;
-    row-gap: 8px;
+    row-gap: 10px;
   }
+
+  /* Search becomes its own full-width row instead of disappearing */
+  .global-search {
+    order: 2;
+    flex-basis: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
   .nav-pills {
     order: 3;
     flex-basis: 100%;
@@ -501,7 +513,42 @@ table.data-table {
   }
   .nav-pills::-webkit-scrollbar { height: 4px; }
   .nav-pills::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 999px; }
-  .page { padding: 20px 14px 40px; }
+  .page { padding: 18px 14px 40px; }
+
+  /* ---- Touch-friendly sizing ---- */
+  .btn {
+    padding: 13px 20px;
+    font-size: 15px;
+    min-height: 46px;
+  }
+  .btn-sm { padding: 10px 16px; font-size: 14px; min-height: 40px; }
+  .btn-link { padding: 6px 2px; font-size: 14px; }
+
+  input[type="text"], input[type="password"], input[type="number"],
+  input[type="date"], input[type="time"], input[type="email"],
+  select, textarea {
+    padding: 12px 14px;
+    font-size: 16px; /* 16px prevents iOS Safari from auto-zooming on focus */
+    min-height: 46px;
+  }
+  textarea { min-height: 90px; }
+
+  .nav-pill { padding: 10px 16px; font-size: 14px; }
+  .logout-link { padding: 8px 12px; font-size: 14px; }
+
+  /* ---- Tables scroll horizontally inside their card instead of
+     squeezing columns unreadably or breaking the page layout ---- */
+  .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { min-width: 620px; }
+
+  /* ---- Nameplate & cards get a little tighter on small screens ---- */
+  .nameplate { padding: 18px 18px; }
+  .card { padding: 18px; }
+
+  /* ---- Modal (equipment detail) fits comfortably ---- */
+  .modal-box { max-height: 92vh; }
+
+  .search-results { width: 100%; }
 }
 
 /* ---- Desktop: fixed vertical sidebar ---- */
@@ -616,10 +663,6 @@ table.data-table {
   font-size: 12.5px;
   color: var(--color-ink-muted);
   text-align: center;
-}
-
-@media (max-width: 900px) {
-  .global-search { display: none; }
 }
 
 /* ============================================================================

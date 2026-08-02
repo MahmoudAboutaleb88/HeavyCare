@@ -286,9 +286,13 @@ async function equipmentCollection(req, res) {
            e.equipment_type, e.plate_number, e.engine_number, e.chassis_number,
            e.purchase_date, e.supplier, e.warranty_expiry,
            e.hour_meter, e.current_status, e.notes, e.image_url,
-           e.created_at
+           e.created_at,
+           we.entry_number AS current_entry_number,
+           jc.id AS current_job_card_id
          FROM equipment e
          JOIN departments d ON d.id = e.department_id
+         LEFT JOIN workshop_entries we ON we.equipment_id = e.id AND we.status = 'open'
+         LEFT JOIN job_cards jc ON jc.workshop_entry_id = we.id
          WHERE e.is_archived = FALSE
          ORDER BY e.created_at DESC`
       );
@@ -467,6 +471,71 @@ async function equipmentItem(req, res, params) {
   }
 
   return sendError(res, 405, 'Method not allowed');
+}
+
+// ============================================================================
+// EQUIPMENT HISTORY handler
+// ============================================================================
+// Full maintenance timeline for one piece of equipment: every workshop
+// entry it's ever had (open or closed), with the matching job card's
+// diagnosis/result/cost, plus a small stats summary. This is what the
+// "أهو دخل، أهو خرج، أهو اتصلح" question actually needs — one screen,
+// full history, nothing hidden behind separate report filters.
+
+async function equipmentHistory(req, res, params) {
+  const user = requireAuth(req);
+  if (!user) return sendError(res, 401, 'Unauthorized — please log in');
+  if (req.method !== 'GET') return sendError(res, 405, 'Method not allowed');
+
+  const id = Number(params.id);
+  if (!id) return sendError(res, 400, 'Invalid equipment id');
+
+  try {
+    const equipmentRows = await query(
+      `SELECT e.*, d.name AS department_name
+       FROM equipment e JOIN departments d ON d.id = e.department_id
+       WHERE e.id = ?`,
+      [id]
+    );
+    if (equipmentRows.length === 0) return sendError(res, 404, 'Equipment not found');
+
+    const entries = await query(
+      `SELECT
+         we.id, we.entry_number, we.entry_date, we.entry_time,
+         we.exit_date, we.exit_time, we.maintenance_type, we.priority,
+         we.reported_problem, we.status, we.duration_hours, we.duration_days,
+         we.maintenance_result, we.equipment_condition,
+         jc.id AS job_card_id, jc.progress_status, jc.diagnosis, jc.root_cause, jc.labor_cost,
+         COALESCE((SELECT SUM(total_cost) FROM job_card_parts WHERE job_card_id = jc.id), 0) AS parts_cost
+       FROM workshop_entries we
+       LEFT JOIN job_cards jc ON jc.workshop_entry_id = we.id
+       WHERE we.equipment_id = ?
+       ORDER BY we.entry_date DESC, we.entry_time DESC`,
+      [id]
+    );
+
+    const closedPM = entries.filter((e) => e.status === 'closed' && e.maintenance_type === 'PM' && e.duration_hours != null);
+    const closedBD = entries.filter((e) => e.status === 'closed' && e.maintenance_type === 'BD' && e.duration_days != null);
+    const avgHoursPM = closedPM.length ? closedPM.reduce((s, e) => s + Number(e.duration_hours), 0) / closedPM.length : null;
+    const avgDaysBD = closedBD.length ? closedBD.reduce((s, e) => s + Number(e.duration_days), 0) / closedBD.length : null;
+    const totalCost = entries.reduce((s, e) => s + Number(e.labor_cost || 0) + Number(e.parts_cost || 0), 0);
+
+    return sendSuccess(res, 200, {
+      equipment: equipmentRows[0],
+      entries,
+      stats: {
+        total_visits: entries.length,
+        pm_count: entries.filter((e) => e.maintenance_type === 'PM').length,
+        bd_count: entries.filter((e) => e.maintenance_type === 'BD').length,
+        avg_hours_pm: avgHoursPM !== null ? Math.round(avgHoursPM * 10) / 10 : null,
+        avg_days_bd: avgDaysBD !== null ? Math.round(avgDaysBD * 10) / 10 : null,
+        total_cost: Math.round(totalCost * 100) / 100,
+      },
+    });
+  } catch (err) {
+    console.error('GET /api/equipment/[id]/history failed:', err);
+    return sendError(res, 500, 'Failed to load equipment history');
+  }
 }
 
 // ============================================================================
@@ -1452,6 +1521,7 @@ const routes = [
 
   { pattern: ['equipment'], methods: { GET: equipmentCollection, POST: equipmentCollection } },
   { pattern: ['equipment', ':id'], methods: { GET: equipmentItem, PUT: equipmentItem, DELETE: equipmentItem } },
+  { pattern: ['equipment', ':id', 'history'], methods: { GET: equipmentHistory } },
 
   { pattern: ['users'], methods: { GET: usersCollection, POST: usersCollection } },
   { pattern: ['users', ':id'], methods: { PUT: userItem } },
