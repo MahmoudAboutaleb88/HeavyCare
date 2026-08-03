@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2B3440">
+<meta name="theme-color" content="#FFFFFF">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>HeavyCare — لوحة التحكم</title>
@@ -76,7 +76,7 @@
     font-family: var(--font-mono); font-size: 11px; font-weight: 700;
     flex-shrink: 0;
   }
-  .rank-list li:first-child .rank-badge { background: var(--color-amber); color: var(--color-steel); }
+  .rank-list li:first-child .rank-badge { background: var(--color-amber); color: #fff; }
 
   @media (max-width: 900px) {
     .kpi-grid { grid-template-columns: 1fr 1fr; }
@@ -202,12 +202,12 @@
   const contentBox = document.getElementById('content');
 
   const CHART_COLORS = {
-    amber: '#F2A900',
-    steel: '#2B3440',
-    success: '#4F772D',
-    danger: '#C1121F',
-    info: '#2E5C8A',
-    grid: '#DCD8CE',
+    amber: '#4F46E5',
+    steel: '#18181B',
+    success: '#16A34A',
+    danger: '#DC2626',
+    info: '#2563EB',
+    grid: '#E4E4E7',
   };
 
   async function loadDashboard() {
@@ -292,7 +292,7 @@
             labels: deptLabels,
             datasets: [{
               data: deptCounts,
-              backgroundColor: [CHART_COLORS.amber, CHART_COLORS.info, CHART_COLORS.success, CHART_COLORS.danger, CHART_COLORS.steel, '#8A93A0', '#C88900', '#3F611F'],
+              backgroundColor: [CHART_COLORS.amber, CHART_COLORS.info, CHART_COLORS.success, CHART_COLORS.danger, CHART_COLORS.steel, '#A78BFA', '#F59E0B', '#0EA5E9'],
               borderWidth: 2,
               borderColor: '#fff',
             }],
